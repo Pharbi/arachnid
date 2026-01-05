@@ -84,6 +84,28 @@ impl SearchProvider for BraveSearchProvider {
     }
 }
 
+pub struct MockSearchProvider;
+
+impl MockSearchProvider {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+#[async_trait]
+impl SearchProvider for MockSearchProvider {
+    async fn search(&self, _query: &str, count: usize) -> Result<Vec<SearchResult>> {
+        Ok(vec![
+            SearchResult {
+                title: "Mock Result 1".to_string(),
+                url: "https://example.com/1".to_string(),
+                snippet: "This is a mock search result".to_string(),
+            };
+            count.min(10)
+        ])
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
