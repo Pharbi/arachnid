@@ -1,9 +1,15 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use std::collections::HashMap;
 use std::sync::Arc;
 
+use arachnid::capabilities::{
+    search::SearchCapability, synthesizer::SynthesizerCapability, Capability, Providers,
+};
 use arachnid::engine::coordination::CoordinationEngine;
 use arachnid::providers::embedding::{EmbeddingProvider, OpenAIEmbeddingProvider};
+use arachnid::providers::llm::{AnthropicProvider, LLMProvider, OpenAIProvider};
+use arachnid::providers::search::{BraveSearchProvider, SearchProvider};
 use arachnid::storage::memory::{InMemoryStore, WebStore};
 use arachnid::types::{Agent, CapabilityType, Signal, SignalDirection, Web, WebConfig};
 use arachnid::Config;
@@ -41,13 +47,42 @@ async fn run_task(task: &str) -> Result<()> {
     let store = Arc::new(InMemoryStore::new());
 
     let embedding_provider: Option<Box<dyn EmbeddingProvider>> =
-        if let Some(api_key) = config.openai_api_key {
+        if let Some(api_key) = config.openai_api_key.clone() {
             Some(Box::new(OpenAIEmbeddingProvider::new(api_key)))
         } else {
             None
         };
 
-    let task_embedding = if let Some(provider) = &embedding_provider {
+    let llm_provider: Option<Box<dyn LLMProvider>> =
+        if let Some(api_key) = config.anthropic_api_key.clone() {
+            Some(Box::new(AnthropicProvider::new(api_key)))
+        } else if let Some(api_key) = config.openai_api_key.clone() {
+            Some(Box::new(OpenAIProvider::new(api_key)))
+        } else {
+            None
+        };
+
+    let search_provider: Option<Box<dyn SearchProvider>> =
+        if let Some(api_key) = config.brave_api_key.clone() {
+            Some(Box::new(BraveSearchProvider::new(api_key)))
+        } else {
+            None
+        };
+
+    let providers = Providers {
+        embedding: embedding_provider,
+        llm: llm_provider,
+        search: search_provider,
+    };
+
+    let mut capabilities: HashMap<CapabilityType, Box<dyn Capability>> = HashMap::new();
+    capabilities.insert(CapabilityType::Search, Box::new(SearchCapability::new()));
+    capabilities.insert(
+        CapabilityType::Synthesizer,
+        Box::new(SynthesizerCapability::new()),
+    );
+
+    let task_embedding = if let Some(provider) = &providers.embedding {
         provider.embed(task).await?
     } else {
         vec![1.0; 1536]
@@ -85,7 +120,14 @@ async fn run_task(task: &str) -> Result<()> {
     println!("Starting web {} for task: {}", web.id, task);
     println!("Root agent: {}", root_agent.id);
 
-    let engine = CoordinationEngine::new(store.clone());
+    if providers.llm.is_none() {
+        println!("Warning: No LLM provider configured. Set ANTHROPIC_API_KEY or OPENAI_API_KEY");
+    }
+    if providers.search.is_none() {
+        println!("Warning: No search provider configured. Set BRAVE_API_KEY");
+    }
+
+    let engine = CoordinationEngine::new(store.clone(), capabilities, providers);
     engine.run_coordination_loop(&web.id).await?;
 
     let final_web = store.get_web(&web.id)?.expect("Web not found");
@@ -94,8 +136,24 @@ async fn run_task(task: &str) -> Result<()> {
     let agents = store.get_agents_by_web(&web.id)?;
     println!("Total agents created: {}", agents.len());
 
+    for agent in &agents {
+        println!(
+            "  - {} ({:?}, {:?})",
+            agent.purpose, agent.capability, agent.state
+        );
+    }
+
     let all_signals = store.get_pending_signals(&web.id)?;
-    println!("Pending signals: {}", all_signals.len());
+    println!("\nPending signals: {}", all_signals.len());
+
+    if let Some(root) = agents.iter().find(|a| a.is_root()) {
+        if !root.context.accumulated_knowledge.is_empty() {
+            println!("\nAccumulated knowledge at root:");
+            for (i, item) in root.context.accumulated_knowledge.iter().enumerate() {
+                println!("  {}. {}", i + 1, item.content);
+            }
+        }
+    }
 
     Ok(())
 }
