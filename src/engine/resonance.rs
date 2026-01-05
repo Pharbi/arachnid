@@ -43,7 +43,7 @@ pub fn compute_resonance(agent: &Agent, signal: &Signal) -> ResonanceResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{AgentState, CapabilityType, SignalDirection, WebId};
+    use crate::types::{CapabilityType, SignalDirection, WebId};
 
     #[test]
     fn test_cosine_similarity_identical_vectors() {
