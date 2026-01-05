@@ -26,6 +26,10 @@ impl Capability for SynthesizerCapability {
         "synthesizer"
     }
 
+    fn description(&self) -> &str {
+        "Synthesizes information from multiple sources into coherent summaries"
+    }
+
     async fn execute(
         &self,
         context: &AgentContext,

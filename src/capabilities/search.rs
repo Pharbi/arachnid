@@ -25,6 +25,10 @@ impl Capability for SearchCapability {
         "search"
     }
 
+    fn description(&self) -> &str {
+        "Searches for information using external search providers"
+    }
+
     async fn execute(
         &self,
         context: &AgentContext,
