@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::lifecycle::HealthChangeReason;
 use crate::providers::llm::{LLMProvider, Message};
 use crate::types::{Agent, AgentId};
 
@@ -42,6 +41,7 @@ pub struct ValidationResult {
 
 pub struct ValidationService {
     llm_provider: Arc<dyn LLMProvider>,
+    #[allow(dead_code)]
     config: ValidationConfig,
 }
 

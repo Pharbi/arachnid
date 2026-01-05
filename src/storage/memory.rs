@@ -208,7 +208,7 @@ impl Storage for InMemoryStore {
         let webs = self.webs.read().unwrap();
         Ok(webs
             .values()
-            .filter(|w| state.map_or(true, |s| w.state == s))
+            .filter(|w| state.is_none_or(|s| w.state == s))
             .cloned()
             .collect())
     }
