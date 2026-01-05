@@ -213,6 +213,62 @@ See [Security Guide](.contexts/security.md) for details.
 - [ ] Agent definition templates
 - [ ] Performance optimizations
 
+## v2.0 Architecture (In Progress)
+
+Version 2.0 introduces a flexible definition/instance/tool model, moving from hardcoded capabilities to dynamic agent definitions.
+
+### Key Changes
+
+**Agent Definitions** - YAML templates that describe agents:
+- Tuning keywords for resonance matching
+- System prompts and temperature settings
+- Available tools (web_search, spawn_agent, emit_signal, etc.)
+- Source: built-in, user custom, or LLM-generated
+
+**Agent Instances** - Running agents that reference definitions:
+- Maintain individual state and health
+- Can drift from base definition over time
+- Created by Agent Factory based on needs
+
+**Tool Runtime** - Rust-implemented actions:
+- Information: web_search, fetch_url, read_file, search_codebase
+- Output: write_file, emit_signal
+- Coordination: spawn_agent
+- Execution: execute_code (sandboxed)
+
+### Benefits
+
+- **Flexibility**: Agents adapt to any task via generated definitions
+- **Reusability**: Generated definitions cached for future use
+- **Extensibility**: Users can add custom definitions
+- **Efficiency**: Dormant agents reactivate instead of spawning new ones
+
+### Custom Definitions
+
+Users can create custom agent definitions in `~/.arachnid/agents/custom/`:
+
+```yaml
+name: security-reviewer
+version: 1.0.0
+
+tuning:
+  keywords:
+    - security vulnerabilities
+    - code review
+    - SQL injection
+
+llm:
+  system_prompt: |
+    You are a security expert reviewing code.
+    Use emit_signal to report issues found.
+  temperature: 0.3
+
+tools:
+  - read_file
+  - search_codebase
+  - emit_signal
+```
+
 ## License
 
 MIT
