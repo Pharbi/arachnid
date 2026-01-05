@@ -482,7 +482,9 @@ mod tests {
         let pending = Storage::get_pending_signals(&store, web.id).await.unwrap();
         assert_eq!(pending.len(), 1);
 
-        Storage::mark_signal_processed(&store, signal_id).await.unwrap();
+        Storage::mark_signal_processed(&store, signal_id)
+            .await
+            .unwrap();
 
         let pending_after = Storage::get_pending_signals(&store, web.id).await.unwrap();
         assert_eq!(pending_after.len(), 0);
