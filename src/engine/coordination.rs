@@ -3,9 +3,7 @@ use std::sync::Arc;
 
 use crate::engine::propagation::propagate_signal;
 use crate::storage::memory::WebStore;
-use crate::types::{
-    Agent, AgentState, ExecutionStatus, Signal, SignalDirection, SignalDraft, WebState,
-};
+use crate::types::{Agent, AgentState, ExecutionStatus, Signal, SignalDraft, WebState};
 
 pub struct CoordinationEngine<S: WebStore> {
     store: Arc<S>,
@@ -111,16 +109,7 @@ impl<S: WebStore> CoordinationEngine<S> {
         Ok(ExecutionResult {
             status: ExecutionStatus::Complete,
             output: serde_json::json!({"message": format!("Agent {} executed", agent.purpose)}),
-            signals_to_emit: vec![SignalDraft {
-                frequency: agent.tuning.clone(),
-                content: format!("Result from {}", agent.purpose),
-                direction: if agent.is_root() {
-                    SignalDirection::Downward
-                } else {
-                    SignalDirection::Upward
-                },
-                payload: Some(serde_json::json!({"completed": true})),
-            }],
+            signals_to_emit: vec![],
             needs: vec![],
         })
     }
@@ -179,7 +168,7 @@ pub struct Need {
 mod tests {
     use super::*;
     use crate::storage::memory::InMemoryStore;
-    use crate::types::{CapabilityType, Web, WebConfig};
+    use crate::types::{CapabilityType, SignalDirection, Web, WebConfig};
 
     #[tokio::test]
     async fn test_coordination_loop_converges() {

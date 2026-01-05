@@ -53,8 +53,9 @@ async fn run_task(task: &str) -> Result<()> {
         vec![1.0; 1536]
     };
 
+    let web_id = uuid::Uuid::new_v4();
     let root_agent = Agent::new(
-        uuid::Uuid::new_v4(),
+        web_id,
         None,
         task.to_string(),
         task_embedding.clone(),
@@ -62,7 +63,13 @@ async fn run_task(task: &str) -> Result<()> {
         0.6,
     );
 
-    let web = Web::new(root_agent.id, task.to_string(), WebConfig::default());
+    let web = Web {
+        id: web_id,
+        root_agent: root_agent.id,
+        task: task.to_string(),
+        state: arachnid::types::WebState::Running,
+        config: WebConfig::default(),
+    };
 
     store.create_web(web.clone())?;
     store.add_agent(root_agent.clone())?;
