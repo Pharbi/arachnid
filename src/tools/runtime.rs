@@ -10,6 +10,7 @@ use crate::providers::search::SearchProvider;
 
 pub struct ToolRuntime {
     tools: HashMap<ToolType, Box<dyn Tool>>,
+    #[allow(dead_code)]
     sandbox_root: PathBuf,
 }
 

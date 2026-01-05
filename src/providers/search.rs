@@ -86,6 +86,12 @@ impl SearchProvider for BraveSearchProvider {
 
 pub struct MockSearchProvider;
 
+impl Default for MockSearchProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MockSearchProvider {
     pub fn new() -> Self {
         Self
