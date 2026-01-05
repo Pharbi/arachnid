@@ -1,7 +1,19 @@
 [package]
 name = "arachnid"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
+authors = ["Kwesi Yankson"]
+description = "Autonomous agent coordination through semantic resonance"
+license = "MIT"
+repository = "https://github.com/Pharbi/arachnid"
+homepage = "https://github.com/Pharbi/arachnid"
+documentation = "https://github.com/Pharbi/arachnid"
+readme = "README.md"
+keywords = ["ai", "agents", "llm", "coordination", "autonomous"]
+categories = ["command-line-utilities", "development-tools"]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
 uuid = { version = "1.11", features = ["v4", "serde"] }

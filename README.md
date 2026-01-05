@@ -1,145 +1,228 @@
 # Arachnid
 
-An autonomous agent coordination runtime where agents self-organize through semantic resonance. Agents activate based on signal similarity rather than explicit routing, like vibrations propagating through a spider web.
+Autonomous agent coordination through semantic resonance.
 
-## Status: Phase 2 Complete
+## Overview
 
-Phase 2 adds real LLM/search integration with autonomous agent spawning and research capabilities.
+Arachnid is a runtime where AI agents self-organize to accomplish tasks. Instead of explicit orchestration, agents activate based on signal relevance, like vibrations propagating through a spider web.
+
+## Status: v1.0 Release Candidate
+
+Complete autonomous agent coordination system with lifecycle management, PostgreSQL persistence, validation service, HTTP API, and comprehensive capabilities.
 
 ## Features
 
-**Core Infrastructure (Phase 1):**
-- Signal propagation along agent DAG edges with configurable attenuation
-- Resonance-based activation (agents activate when signal resonance exceeds threshold)
-- Coordination loop managing agent lifecycle and signal processing
-- In-memory HashMap-based storage for webs, agents, and signals
+- **Resonance-based coordination**: Agents activate when signals resonate with their tuning
+- **Lifecycle management**: Health tracking, probation periods, state machines, graceful degradation
+- **Signal propagation**: Upward/downward signal flow with attenuation and hop counting
+- **Validation service**: LLM-based output quality assurance with risk prioritization
+- **Multiple capabilities**: Search, Synthesizer, Code Writer, Code Reviewer, Analyst
+- **PostgreSQL + pgvector**: Persistent storage with vector similarity search
+- **HTTP API**: RESTful endpoints with Server-Sent Events for real-time updates
+- **Local LLM support**: Ollama provider for running models locally
 
-**Agent Capabilities (Phase 2):**
-- **SearchCapability**: Web search using Brave Search API
-- **SynthesizerCapability**: LLM-powered analysis and synthesis
-- **Autonomous Spawning**: Agents spawn child agents for unmet needs
-- **Lineage Check**: Before spawning, checks if existing lineage agent can handle the need
-- **Context Accumulation**: Parent agents accumulate knowledge from child results
+## Quick Start
 
-**Provider Integrations:**
-- **LLM**: Anthropic Claude 3.5 Sonnet or OpenAI GPT-4o
-- **Embeddings**: OpenAI text-embedding-3-small
-- **Search**: Brave Search API
-
-## Building
+### Installation
 
 ```bash
-cargo build --release
+cargo install arachnid
 ```
 
-## Running
+### Configuration
+
+Set your API keys:
 
 ```bash
-# With all providers configured (recommended for research tasks)
-export ANTHROPIC_API_KEY=sk-ant-...  # or OPENAI_API_KEY
+export ANTHROPIC_API_KEY=sk-ant-...
+export OPENAI_API_KEY=sk-...
 export BRAVE_API_KEY=BSA...
-export OPENAI_API_KEY=sk-...  # for embeddings
-cargo run -- run "Research quantum computing error correction"
-
-# Minimal (no external APIs)
-cargo run -- run "test task"
-
-# Version info
-cargo run -- --version
+export DATABASE_URL=postgres://user:pass@localhost:5432/arachnid
 ```
 
-## Testing
+### Usage
 
 ```bash
-cargo test
+# Run a research task
+arachnid run "What are the main approaches to quantum error correction?"
+
+# Watch progress in real-time
+arachnid run --watch "Analyze the competitive landscape for AI coding tools"
+
+# Start API server
+arachnid serve --port 8080
+
+# Check status of recent webs
+arachnid status
+
+# View agent details
+arachnid agent <agent-id> --context
 ```
 
 ## Architecture
 
-```
-arachnid/
-├── src/
-│   ├── types/          # Core data structures (Agent, Signal, Web)
-│   ├── engine/         # Coordination loop, propagation, resonance, spawning
-│   ├── storage/        # WebStore trait and in-memory implementation
-│   ├── providers/      # External service adapters
-│   │   ├── embedding.rs  # OpenAI embeddings
-│   │   ├── llm.rs        # Anthropic/OpenAI LLM
-│   │   └── search.rs     # Brave Search
-│   └── capabilities/   # Agent capabilities
-│       ├── search.rs      # SearchCapability
-│       └── synthesizer.rs # SynthesizerCapability
-```
+Arachnid uses a web-based coordination model:
 
-## Configuration
+1. **Web**: A task execution environment with a root agent
+2. **Agents**: Specialized workers with capabilities and health tracking
+3. **Signals**: Messages with semantic embeddings propagating through the web
+4. **Resonance**: Cosine similarity between agent tuning and signal frequency
 
-Environment variables:
-- `ANTHROPIC_API_KEY`: Anthropic API key for LLM (or use OPENAI_API_KEY)
-- `OPENAI_API_KEY`: OpenAI API key for LLM/embeddings
-- `BRAVE_API_KEY`: Brave Search API key
+### Agent Lifecycle
 
-## How It Works
+Agents transition through states based on health and activity:
+- **Active**: Currently executing
+- **Listening**: Waiting for resonant signals
+- **Dormant**: Idle, can be reactivated
+- **Quarantine**: Low health (< 0.6), signals marked suspect
+- **Isolated**: Very low health (< 0.4), signals dampened
+- **WindingDown**: Terminal, transferring state
+- **Terminated**: Removed from web
 
-1. **Task Initiation**: Root agent (Synthesizer) receives the task
-2. **Need Identification**: Synthesizer analyzes task and identifies research needs
-3. **Spawning Decision**:
-   - First checks lineage (ancestors + descendants) for agents that resonate with the need
-   - If found, sends signal to existing agent
-   - If not found, spawns new child agent with Search capability
-4. **Research Execution**: Search agents query Brave API and emit result signals upward
-5. **Context Accumulation**: Parent agents accumulate knowledge from child signals
-6. **Synthesis**: Root synthesizer combines gathered knowledge into coherent summary
-7. **Convergence**: Web converges when no active agents and no pending signals
+### Capabilities
 
-## Example Flow
+- **Search**: Web search using Brave API
+- **Synthesizer**: Multi-source information synthesis
+- **CodeWriter**: Code generation with LLM
+- **CodeReviewer**: Security and quality review
+- **Analyst**: Data analysis and insight extraction
 
-```
-Research "quantum error correction"
-  └─> Root Synthesizer identifies needs:
-       ├─> "quantum error correction techniques"
-       ├─> "surface codes and stabilizer codes"
-       └─> "practical implementations"
-            └─> Each spawns Search agent
-                 └─> Search results flow up as signals
-                      └─> Root synthesizes final answer
+## HTTP API
+
+```bash
+# Create a web
+curl -X POST http://localhost:8080/webs \\
+  -H "Content-Type: application/json" \\
+  -d '{"task": "Research quantum computing"}'
+
+# Stream events
+curl http://localhost:8080/webs/{id}/events
+
+# Get results
+curl http://localhost:8080/webs/{id}/results
 ```
 
-## Phase Implementation Details
+See [API Reference](.contexts/api-reference.md) for full documentation.
 
-### Phase 1
-- Core types: Agent, Signal, Web with supporting enums
-- Cosine similarity for vector comparison
-- Signal attenuation (default: 0.8 per hop)
-- Minimum amplitude threshold (default: 0.1)
-- Agent activation threshold (default: 0.6)
-- Maximum depth limit (default: 10)
-- Maximum agents per web (default: 100)
+## Development
 
-### Phase 2
-- LLMProvider trait with Anthropic (Claude 3.5 Sonnet) and OpenAI (GPT-4o) adapters
-- SearchProvider trait with Brave Search API adapter
-- Capability trait for pluggable agent behaviors
-- ExecutionResult with signals and needs
-- Need handling with lineage resonance check
-- Context accumulation (max 10 items per agent)
-- Providers struct bundling all external services
-- HashMap-based capability registry
+```bash
+# Run tests
+cargo test
+
+# Format code
+cargo fmt
+
+# Check lints
+cargo clippy --all-features -- -D warnings
+
+# Run database migrations
+cargo run -- migrate
+
+# Validate configuration
+cargo run -- validate-config
+```
+
+## Database Setup
+
+```bash
+# Install PostgreSQL with pgvector
+# macOS
+brew install postgresql pgvector
+
+# Create database
+createdb arachnid
+
+# Run migrations
+cargo run -- migrate
+```
+
+## Provider Configuration
+
+### Anthropic (Claude)
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### OpenAI (GPT-4, Embeddings)
+```bash
+export OPENAI_API_KEY=sk-...
+```
+
+### Ollama (Local LLM)
+```bash
+export OLLAMA_URL=http://localhost:11434
+export OLLAMA_MODEL=llama3.1
+```
+
+### Brave Search
+```bash
+export BRAVE_API_KEY=BSA...
+```
 
 ## Test Coverage
 
-29 unit tests covering:
-- Cosine similarity edge cases
-- Resonance computation
-- Signal propagation and attenuation
-- Storage operations (ancestors, descendants, lineage queries)
-- Provider initialization
-- Capability interfaces
+72 unit tests covering:
+- Core coordination and resonance
+- Signal propagation with attenuation
+- Lifecycle management and state transitions
+- Health tracking with probation
+- Tuning drift and adaptation
+- Storage operations (memory and PostgreSQL)
+- All capabilities
+- Validation service
+- HTTP API endpoints
 
-## Future Enhancements
+## Documentation
 
-- TOML configuration files
-- Integration tests with mocked APIs
-- Additional capabilities (code generation, data analysis)
-- Persistent storage backends
-- Web UI for monitoring agent activity
-- Performance optimizations for large webs
+- [Architecture Guide](.contexts/architecture.md) - System design and concepts
+- [API Reference](.contexts/api-reference.md) - HTTP endpoints and SSE events
+- [Configuration Guide](.contexts/configuration.md) - All configuration options
+- [Capability Development](.contexts/capabilities.md) - Creating new capabilities
+
+## Performance
+
+Target benchmarks:
+- Signal propagation: < 10ms per hop
+- Resonance computation: < 5ms per agent
+- Agent spawn time: < 100ms
+
+## Security
+
+- API keys stored in environment variables
+- Sandboxed file operations (planned)
+- Input validation on all endpoints
+- No authentication by default (use reverse proxy for production)
+
+See [Security Guide](.contexts/security.md) for details.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Write tests for your changes
+4. Ensure all tests pass
+5. Submit a pull request
+
+## Roadmap
+
+- [ ] Web UI for monitoring
+- [ ] Additional embedding providers
+- [ ] Code execution sandbox
+- [ ] Streaming LLM responses
+- [ ] Agent definition templates
+- [ ] Performance optimizations
+
+## License
+
+MIT
+
+## Acknowledgments
+
+Built with:
+- Rust async runtime (Tokio)
+- PostgreSQL with pgvector extension
+- Axum web framework
+- Anthropic Claude API
+- OpenAI API
+- Brave Search API
