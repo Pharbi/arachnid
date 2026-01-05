@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::engine::propagation::propagate_signal;
 use crate::storage::memory::WebStore;
 use crate::types::{
-    Agent, AgentState, ExecutionStatus, Signal, SignalDirection, SignalDraft, Web, WebState,
+    Agent, AgentState, ExecutionStatus, Signal, SignalDirection, SignalDraft, WebState,
 };
 
 pub struct CoordinationEngine<S: WebStore> {
