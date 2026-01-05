@@ -1,3 +1,5 @@
+pub mod builtin;
 pub mod schema;
 
-pub use schema::{AgentDefinition, DefinitionSource, ToolType};
+pub use builtin::task_coordinator_definition;
+pub use schema::{AgentDefinition, DefinitionId, DefinitionSource, ToolType};
