@@ -492,6 +492,9 @@ fn row_to_agent(r: &sqlx::postgres::PgRow) -> Result<Agent> {
     let capability = match cap_str.as_str() {
         "Search" => CapabilityType::Search,
         "Synthesizer" => CapabilityType::Synthesizer,
+        "CodeWriter" => CapabilityType::CodeWriter,
+        "CodeReviewer" => CapabilityType::CodeReviewer,
+        "Analyst" => CapabilityType::Analyst,
         s => CapabilityType::Custom(s.to_string()),
     };
 
@@ -531,6 +534,9 @@ fn capability_to_str(capability: &CapabilityType) -> String {
     match capability {
         CapabilityType::Search => "Search".to_string(),
         CapabilityType::Synthesizer => "Synthesizer".to_string(),
+        CapabilityType::CodeWriter => "CodeWriter".to_string(),
+        CapabilityType::CodeReviewer => "CodeReviewer".to_string(),
+        CapabilityType::Analyst => "Analyst".to_string(),
         CapabilityType::Custom(s) => s.clone(),
     }
 }
