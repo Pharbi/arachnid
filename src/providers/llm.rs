@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn test_anthropic_provider_creation() {
         let provider = AnthropicProvider::new("test-key".to_string());
-        assert_eq!(provider.model, "claude-3-5-sonnet-20241022");
+        assert_eq!(provider.model, "claude-3-5-sonnet-20240620");
     }
 
     #[test]

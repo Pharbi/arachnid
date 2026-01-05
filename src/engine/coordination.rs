@@ -163,7 +163,9 @@ impl<S: WebStore> CoordinationEngine<S> {
         let capability = self.capabilities.get(&agent.capability);
 
         if let Some(cap) = capability {
-            let result: ExecutionResult = cap.execute(&agent.context, trigger, &self.providers).await?;
+            let result: ExecutionResult = cap
+                .execute(&agent.context, trigger, &self.providers)
+                .await?;
             Ok(result)
         } else {
             Ok(ExecutionResult {
@@ -299,7 +301,6 @@ pub struct Need {
 mod tests {
     use super::*;
     use crate::storage::memory::InMemoryStore;
-    use crate::types::{SignalDirection, Web, WebConfig};
 
     #[tokio::test]
     async fn test_coordination_engine_creation() {

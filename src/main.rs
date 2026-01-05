@@ -53,13 +53,14 @@ async fn run_task(task: &str) -> Result<()> {
             None
         };
 
-    let llm_provider: Option<Box<dyn LLMProvider>> = if let Some(api_key) = config.anthropic_api_key.clone() {
-        Some(Box::new(AnthropicProvider::new(api_key)))
-    } else if let Some(api_key) = config.openai_api_key.clone() {
-        Some(Box::new(OpenAIProvider::new(api_key)))
-    } else {
-        None
-    };
+    let llm_provider: Option<Box<dyn LLMProvider>> =
+        if let Some(api_key) = config.anthropic_api_key.clone() {
+            Some(Box::new(AnthropicProvider::new(api_key)))
+        } else if let Some(api_key) = config.openai_api_key.clone() {
+            Some(Box::new(OpenAIProvider::new(api_key)))
+        } else {
+            None
+        };
 
     let search_provider: Option<Box<dyn SearchProvider>> =
         if let Some(api_key) = config.brave_api_key.clone() {
