@@ -18,6 +18,8 @@ pub struct WebConfig {
     pub default_threshold: f32,
     pub max_agents: usize,
     pub max_depth: usize,
+    pub idle_timeout_secs: u64,
+    pub dormant_ttl_secs: u64,
 }
 
 impl Default for WebConfig {
@@ -28,6 +30,8 @@ impl Default for WebConfig {
             default_threshold: 0.6,
             max_agents: 100,
             max_depth: 10,
+            idle_timeout_secs: 30,
+            dormant_ttl_secs: 600,
         }
     }
 }

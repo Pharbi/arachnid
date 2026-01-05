@@ -95,21 +95,14 @@ mod tests {
 
     #[test]
     fn test_compute_resonance_activates() {
-        let agent = crate::types::Agent {
-            id: uuid::Uuid::new_v4(),
-            web_id: WebId::new_v4(),
-            parent_id: None,
-            purpose: "test".to_string(),
-            tuning: vec![1.0, 0.0, 0.0],
-            capability: CapabilityType::Search,
-            state: AgentState::Listening,
-            health: 1.0,
-            activation_threshold: 0.5,
-            context: crate::types::agent::AgentContext {
-                purpose: "test".to_string(),
-                accumulated_knowledge: vec![],
-            },
-        };
+        let agent = crate::types::Agent::new(
+            WebId::new_v4(),
+            None,
+            "test".to_string(),
+            vec![1.0, 0.0, 0.0],
+            CapabilityType::Search,
+            0.5,
+        );
 
         let signal = crate::types::Signal {
             id: uuid::Uuid::new_v4(),
@@ -130,21 +123,14 @@ mod tests {
 
     #[test]
     fn test_compute_resonance_does_not_activate() {
-        let agent = crate::types::Agent {
-            id: uuid::Uuid::new_v4(),
-            web_id: WebId::new_v4(),
-            parent_id: None,
-            purpose: "test".to_string(),
-            tuning: vec![1.0, 0.0, 0.0],
-            capability: CapabilityType::Search,
-            state: AgentState::Listening,
-            health: 1.0,
-            activation_threshold: 0.9,
-            context: crate::types::agent::AgentContext {
-                purpose: "test".to_string(),
-                accumulated_knowledge: vec![],
-            },
-        };
+        let agent = crate::types::Agent::new(
+            WebId::new_v4(),
+            None,
+            "test".to_string(),
+            vec![1.0, 0.0, 0.0],
+            CapabilityType::Search,
+            0.9,
+        );
 
         let signal = crate::types::Signal {
             id: uuid::Uuid::new_v4(),
@@ -165,21 +151,14 @@ mod tests {
 
     #[test]
     fn test_compute_resonance_with_attenuated_signal() {
-        let agent = crate::types::Agent {
-            id: uuid::Uuid::new_v4(),
-            web_id: WebId::new_v4(),
-            parent_id: None,
-            purpose: "test".to_string(),
-            tuning: vec![1.0, 0.0, 0.0],
-            capability: CapabilityType::Search,
-            state: AgentState::Listening,
-            health: 1.0,
-            activation_threshold: 0.5,
-            context: crate::types::agent::AgentContext {
-                purpose: "test".to_string(),
-                accumulated_knowledge: vec![],
-            },
-        };
+        let agent = crate::types::Agent::new(
+            WebId::new_v4(),
+            None,
+            "test".to_string(),
+            vec![1.0, 0.0, 0.0],
+            CapabilityType::Search,
+            0.5,
+        );
 
         let signal = crate::types::Signal {
             id: uuid::Uuid::new_v4(),
