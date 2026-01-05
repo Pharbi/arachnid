@@ -15,9 +15,27 @@ pub type SignalId = Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AgentState {
-    Active,
-    Listening,
-    Dormant,
+    Active,      // Currently working
+    Listening,   // Waiting for signals
+    Dormant,     // Idle, can reactivate
+    Quarantine,  // Low health (< 0.6), signals marked suspect
+    Isolated,    // Very low health (< 0.4), signals dampened
+    WindingDown, // Terminal, transferring state
+    Terminated,  // Gone
+}
+
+impl AgentState {
+    pub fn as_str(&self) -> &str {
+        match self {
+            AgentState::Active => "Active",
+            AgentState::Listening => "Listening",
+            AgentState::Dormant => "Dormant",
+            AgentState::Quarantine => "Quarantine",
+            AgentState::Isolated => "Isolated",
+            AgentState::WindingDown => "WindingDown",
+            AgentState::Terminated => "Terminated",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
