@@ -217,6 +217,36 @@ impl LLMProvider for OpenAIProvider {
     }
 }
 
+// Mock provider for testing
+pub struct MockLLMProvider {
+    response: String,
+}
+
+impl MockLLMProvider {
+    pub fn new() -> Self {
+        Self {
+            response: "CONFIRM - Mock validation response".to_string(),
+        }
+    }
+
+    pub fn with_response(response: String) -> Self {
+        Self { response }
+    }
+}
+
+impl Default for MockLLMProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[async_trait]
+impl LLMProvider for MockLLMProvider {
+    async fn complete(&self, _messages: Vec<Message>) -> Result<String> {
+        Ok(self.response.clone())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -246,5 +276,15 @@ mod tests {
     fn test_openai_provider_creation() {
         let provider = OpenAIProvider::new("test-key".to_string());
         assert_eq!(provider.model, "gpt-4o");
+    }
+
+    #[tokio::test]
+    async fn test_mock_provider() {
+        let provider = MockLLMProvider::new();
+        let result = provider
+            .complete(vec![Message::user("test")])
+            .await
+            .unwrap();
+        assert!(result.contains("CONFIRM"));
     }
 }

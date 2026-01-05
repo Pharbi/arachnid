@@ -208,7 +208,7 @@ impl Storage for InMemoryStore {
         let webs = self.webs.read().unwrap();
         Ok(webs
             .values()
-            .filter(|w| state.map_or(true, |s| w.state == s))
+            .filter(|w| state.is_none_or(|s| w.state == s))
             .cloned()
             .collect())
     }
@@ -482,7 +482,9 @@ mod tests {
         let pending = Storage::get_pending_signals(&store, web.id).await.unwrap();
         assert_eq!(pending.len(), 1);
 
-        Storage::mark_signal_processed(&store, signal_id).await.unwrap();
+        Storage::mark_signal_processed(&store, signal_id)
+            .await
+            .unwrap();
 
         let pending_after = Storage::get_pending_signals(&store, web.id).await.unwrap();
         assert_eq!(pending_after.len(), 0);
