@@ -6,6 +6,7 @@ pub mod engine;
 pub mod lifecycle;
 pub mod providers;
 pub mod storage;
+pub mod tools;
 pub mod types;
 pub mod validation;
 
