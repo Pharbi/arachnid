@@ -1,3 +1,6 @@
+pub mod analyst;
+pub mod code_reviewer;
+pub mod code_writer;
 pub mod search;
 pub mod synthesizer;
 
@@ -19,6 +22,7 @@ pub struct Providers {
 #[async_trait]
 pub trait Capability: Send + Sync {
     fn name(&self) -> &str;
+    fn description(&self) -> &str;
 
     async fn execute(
         &self,
@@ -27,3 +31,7 @@ pub trait Capability: Send + Sync {
         providers: &Providers,
     ) -> Result<ExecutionResult>;
 }
+
+pub use analyst::AnalystCapability;
+pub use code_reviewer::CodeReviewerCapability;
+pub use code_writer::CodeWriterCapability;

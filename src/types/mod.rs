@@ -62,5 +62,8 @@ pub enum ExecutionStatus {
 pub enum CapabilityType {
     Search,
     Synthesizer,
+    CodeWriter,
+    CodeReviewer,
+    Analyst,
     Custom(String),
 }
