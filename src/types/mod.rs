@@ -2,6 +2,10 @@ pub mod agent;
 pub mod signal;
 pub mod web;
 
+pub use agent::{Agent, AgentContext, ContextItem};
+pub use signal::{Signal, SignalDraft};
+pub use web::{Web, WebConfig};
+
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
