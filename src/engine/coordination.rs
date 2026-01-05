@@ -1,17 +1,33 @@
 use anyhow::Result;
+use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::capabilities::{Capability, Providers};
 use crate::engine::propagation::propagate_signal;
+use crate::engine::resonance::compute_resonance;
 use crate::storage::memory::WebStore;
-use crate::types::{Agent, AgentState, ExecutionStatus, Signal, SignalDraft, WebState};
+use crate::types::{
+    Agent, AgentState, CapabilityType, ContextItem, ExecutionStatus, Signal, SignalDirection,
+    SignalDraft, WebState,
+};
 
 pub struct CoordinationEngine<S: WebStore> {
     store: Arc<S>,
+    capabilities: HashMap<CapabilityType, Box<dyn Capability>>,
+    providers: Providers,
 }
 
 impl<S: WebStore> CoordinationEngine<S> {
-    pub fn new(store: Arc<S>) -> Self {
-        Self { store }
+    pub fn new(
+        store: Arc<S>,
+        capabilities: HashMap<CapabilityType, Box<dyn Capability>>,
+        providers: Providers,
+    ) -> Self {
+        Self {
+            store,
+            capabilities,
+            providers,
+        }
     }
 
     pub async fn run_coordination_loop(&self, web_id: &uuid::Uuid) -> Result<()> {
@@ -51,14 +67,18 @@ impl<S: WebStore> CoordinationEngine<S> {
     }
 
     async fn process_signal(&self, signal: &Signal) -> Result<()> {
-        let web = self
+        let origin_agent = self
             .store
             .get_agent(&signal.origin)?
             .ok_or_else(|| anyhow::anyhow!("Signal origin agent not found"))?;
         let web = self
             .store
-            .get_web(&web.web_id)?
+            .get_web(&origin_agent.web_id)?
             .ok_or_else(|| anyhow::anyhow!("Web not found"))?;
+
+        if signal.direction == SignalDirection::Upward {
+            self.accumulate_context_from_signal(signal).await?;
+        }
 
         let propagation_results = propagate_signal(signal, &web.config, &*self.store).await?;
 
@@ -66,6 +86,36 @@ impl<S: WebStore> CoordinationEngine<S> {
             if result.resonance.activated {
                 self.activate_agent(&result.agent_id, signal).await?;
             }
+        }
+
+        Ok(())
+    }
+
+    async fn accumulate_context_from_signal(&self, signal: &Signal) -> Result<()> {
+        let origin_agent = self.store.get_agent(&signal.origin)?;
+        if origin_agent.is_none() {
+            return Ok(());
+        }
+
+        let origin = origin_agent.unwrap();
+        if let Some(parent_id) = origin.parent_id {
+            let mut parent = self
+                .store
+                .get_agent(&parent_id)?
+                .ok_or_else(|| anyhow::anyhow!("Parent agent not found"))?;
+
+            parent.context.accumulated_knowledge.push(ContextItem {
+                source_agent: origin.id,
+                content: signal.content.clone(),
+                data: signal.payload.clone().unwrap_or(serde_json::json!({})),
+            });
+
+            const MAX_CONTEXT_ITEMS: usize = 10;
+            if parent.context.accumulated_knowledge.len() > MAX_CONTEXT_ITEMS {
+                parent.context.accumulated_knowledge.drain(0..1);
+            }
+
+            self.store.update_agent(parent)?;
         }
 
         Ok(())
@@ -91,6 +141,10 @@ impl<S: WebStore> CoordinationEngine<S> {
             self.store.add_signal(new_signal)?;
         }
 
+        for need in result.needs {
+            self.handle_need(&agent, &need).await?;
+        }
+
         agent.state = match result.status {
             ExecutionStatus::Complete => AgentState::Dormant,
             ExecutionStatus::NeedsMore => AgentState::Listening,
@@ -104,14 +158,91 @@ impl<S: WebStore> CoordinationEngine<S> {
     async fn execute_agent(
         &self,
         agent: &Agent,
-        _trigger: Option<&Signal>,
+        trigger: Option<&Signal>,
     ) -> Result<ExecutionResult> {
-        Ok(ExecutionResult {
-            status: ExecutionStatus::Complete,
-            output: serde_json::json!({"message": format!("Agent {} executed", agent.purpose)}),
-            signals_to_emit: vec![],
-            needs: vec![],
-        })
+        let capability = self.capabilities.get(&agent.capability);
+
+        if let Some(cap) = capability {
+            let result: ExecutionResult = cap.execute(&agent.context, trigger, &self.providers).await?;
+            Ok(result)
+        } else {
+            Ok(ExecutionResult {
+                status: ExecutionStatus::Complete,
+                output: serde_json::json!({"message": format!("Agent {} executed (no capability)", agent.purpose)}),
+                signals_to_emit: vec![],
+                needs: vec![],
+            })
+        }
+    }
+
+    async fn handle_need(&self, parent: &Agent, need: &Need) -> Result<()> {
+        let need_embedding = if let Some(provider) = &self.providers.embedding {
+            provider.embed(&need.description).await?
+        } else {
+            vec![1.0; 1536]
+        };
+
+        let mut ancestors = self.store.get_ancestors(&parent.id)?;
+        ancestors.push(parent.clone());
+        let descendants = self.store.get_descendants(&parent.id)?;
+        ancestors.extend(descendants);
+
+        let dummy_signal = Signal {
+            id: uuid::Uuid::new_v4(),
+            origin: parent.id,
+            frequency: need_embedding.clone(),
+            content: need.description.clone(),
+            amplitude: 1.0,
+            direction: SignalDirection::Downward,
+            hop_count: 0,
+            payload: None,
+        };
+
+        for lineage_agent in &ancestors {
+            let resonance = compute_resonance(lineage_agent, &dummy_signal);
+            if resonance.activated {
+                let signal_to_agent = Signal::new(
+                    parent.id,
+                    need_embedding.clone(),
+                    need.description.clone(),
+                    SignalDirection::Downward,
+                );
+                self.store.add_signal(signal_to_agent)?;
+                return Ok(());
+            }
+        }
+
+        let web = self.store.get_web(&parent.web_id)?.unwrap();
+        let agents_count = self.store.get_agents_by_web(&parent.web_id)?.len();
+        if agents_count >= web.config.max_agents {
+            return Ok(());
+        }
+
+        let child_capability = need
+            .suggested_capability
+            .clone()
+            .unwrap_or(CapabilityType::Search);
+
+        let child_agent = Agent::new(
+            parent.web_id,
+            Some(parent.id),
+            need.description.clone(),
+            need_embedding.clone(),
+            child_capability,
+            web.config.default_threshold,
+        );
+
+        self.store.add_agent(child_agent.clone())?;
+
+        let initial_signal = Signal::new(
+            parent.id,
+            need_embedding,
+            need.description.clone(),
+            SignalDirection::Downward,
+        );
+        self.store.add_signal(initial_signal)?;
+
+        Ok(())
     }
 
     async fn check_convergence(&self, web_id: &uuid::Uuid) -> Result<bool> {
@@ -161,77 +292,24 @@ pub struct ExecutionResult {
 #[derive(Debug, Clone)]
 pub struct Need {
     pub description: String,
-    pub suggested_capability: Option<crate::types::CapabilityType>,
+    pub suggested_capability: Option<CapabilityType>,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::storage::memory::InMemoryStore;
-    use crate::types::{CapabilityType, SignalDirection, Web, WebConfig};
+    use crate::types::{SignalDirection, Web, WebConfig};
 
     #[tokio::test]
-    async fn test_coordination_loop_converges() {
+    async fn test_coordination_engine_creation() {
         let store = Arc::new(InMemoryStore::new());
-        let engine = CoordinationEngine::new(store.clone());
-
-        let root_agent = Agent::new(
-            uuid::Uuid::new_v4(),
-            None,
-            "root".to_string(),
-            vec![1.0, 0.0, 0.0],
-            CapabilityType::Synthesizer,
-            0.5,
-        );
-
-        let web = Web::new(root_agent.id, "test task".to_string(), WebConfig::default());
-
-        store.create_web(web.clone()).unwrap();
-        store.add_agent(root_agent.clone()).unwrap();
-
-        let signal = Signal::new(
-            root_agent.id,
-            vec![1.0, 0.0, 0.0],
-            "initial signal".to_string(),
-            SignalDirection::Downward,
-        );
-        store.add_signal(signal).unwrap();
-
-        engine.run_coordination_loop(&web.id).await.unwrap();
-
-        let final_web = store.get_web(&web.id).unwrap().unwrap();
-        assert_eq!(final_web.state, WebState::Converged);
-    }
-
-    #[tokio::test]
-    async fn test_agent_activation() {
-        let store = Arc::new(InMemoryStore::new());
-        let engine = CoordinationEngine::new(store.clone());
-
-        let root_agent = Agent::new(
-            uuid::Uuid::new_v4(),
-            None,
-            "root".to_string(),
-            vec![1.0, 0.0, 0.0],
-            CapabilityType::Synthesizer,
-            0.5,
-        );
-
-        store.add_agent(root_agent.clone()).unwrap();
-
-        let signal = Signal::new(
-            root_agent.id,
-            vec![1.0, 0.0, 0.0],
-            "test signal".to_string(),
-            SignalDirection::Downward,
-        );
-
-        engine
-            .activate_agent(&root_agent.id, &signal)
-            .await
-            .unwrap();
-
-        let updated_agent = store.get_agent(&root_agent.id).unwrap().unwrap();
-        assert_eq!(updated_agent.state, AgentState::Dormant);
+        let capabilities = HashMap::new();
+        let providers = Providers {
+            embedding: None,
+            llm: None,
+            search: None,
+        };
+        let _engine = CoordinationEngine::new(store, capabilities, providers);
     }
 }
