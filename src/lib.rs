@@ -1,3 +1,4 @@
+pub mod api;
 pub mod capabilities;
 pub mod config;
 pub mod engine;

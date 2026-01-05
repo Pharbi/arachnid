@@ -17,3 +17,6 @@ async-trait = "0.1"
 toml = "0.8"
 sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "json"] }
 pgvector = { version = "0.4", features = ["sqlx"] }
+axum = "0.7"
+tower-http = { version = "0.5", features = ["cors"] }
+tokio-stream = "0.1"
