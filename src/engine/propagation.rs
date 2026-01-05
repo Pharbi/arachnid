@@ -249,9 +249,11 @@ mod tests {
     #[tokio::test]
     async fn test_signal_attenuation() {
         let store = InMemoryStore::new();
-        let mut config = WebConfig::default();
-        config.attenuation_factor = 0.5;
-        config.min_amplitude = 0.2;
+        let config = WebConfig {
+            attenuation_factor: 0.5,
+            min_amplitude: 0.2,
+            ..Default::default()
+        };
 
         let root = Agent::new(
             uuid::Uuid::new_v4(),
@@ -301,9 +303,11 @@ mod tests {
     #[tokio::test]
     async fn test_signal_stops_at_min_amplitude() {
         let store = InMemoryStore::new();
-        let mut config = WebConfig::default();
-        config.attenuation_factor = 0.1;
-        config.min_amplitude = 0.5;
+        let config = WebConfig {
+            attenuation_factor: 0.1,
+            min_amplitude: 0.5,
+            ..Default::default()
+        };
 
         let root = Agent::new(
             uuid::Uuid::new_v4(),

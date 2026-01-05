@@ -179,7 +179,7 @@ pub struct Need {
 mod tests {
     use super::*;
     use crate::storage::memory::InMemoryStore;
-    use crate::types::{CapabilityType, WebConfig};
+    use crate::types::{CapabilityType, Web, WebConfig};
 
     #[tokio::test]
     async fn test_coordination_loop_converges() {
