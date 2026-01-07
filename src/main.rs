@@ -303,7 +303,6 @@ async fn run_task(
     let timeout = Duration::from_secs(timeout_secs);
     let start = std::time::Instant::now();
 
-    // Run coordination loop with timeout
     let coordination_result = tokio::time::timeout(timeout, async {
         if watch {
             run_with_watch(&engine, &web.id, &store, &output, verbose).await
@@ -421,7 +420,6 @@ async fn run_with_watch<S: WebStore>(
         let agents = WebStore::get_agents_by_web(&**store, web_id)?;
         let signals = WebStore::get_pending_signals(&**store, web_id)?;
 
-        // Report new agents
         for agent in &agents {
             if !reported_agents.contains(&agent.id) {
                 reported_agents.insert(agent.id);
@@ -449,7 +447,6 @@ async fn run_with_watch<S: WebStore>(
             }
         }
 
-        // Report signal activity
         if verbose && signals.len() != last_signal_count {
             match output {
                 OutputFormat::Text => {
@@ -481,18 +478,15 @@ async fn run_with_watch<S: WebStore>(
             last_signal_count = signals.len();
         }
 
-        // Check if converged
         if web.state != WebState::Running {
             break;
         }
 
-        // Run one iteration of coordination
         let should_continue = engine.run_single_iteration(web_id).await?;
         if !should_continue {
             break;
         }
 
-        // Small delay to prevent busy loop
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
 
@@ -606,7 +600,6 @@ async fn run_web(id: Uuid, action: Option<WebAction>) -> Result<()> {
 
     match action {
         None => {
-            // Show web details
             let agents = storage.get_web_agents(id).await?;
             let signals = storage.get_pending_signals(id).await?;
 
@@ -678,7 +671,6 @@ async fn run_web(id: Uuid, action: Option<WebAction>) -> Result<()> {
             }
         }
         Some(WebAction::Terminate) => {
-            // Update web state to Failed (termination)
             let mut updated_web = web.clone();
             updated_web.state = WebState::Failed;
             storage.update_web(&updated_web).await?;
@@ -846,14 +838,12 @@ fn run_validate_config() -> Result<()> {
     let mut errors: Vec<String> = vec![];
     let mut warnings: Vec<String> = vec![];
 
-    // Check for at least one LLM provider
     if config.anthropic_api_key.is_none() && config.openai_api_key.is_none() {
         errors.push(
             "No LLM provider configured. Set ANTHROPIC_API_KEY or OPENAI_API_KEY.".to_string(),
         );
     }
 
-    // Check for embedding provider
     if config.openai_api_key.is_none() {
         warnings.push(
             "No embedding provider configured (OPENAI_API_KEY). Will use dummy embeddings."
@@ -861,7 +851,6 @@ fn run_validate_config() -> Result<()> {
         );
     }
 
-    // Check for search provider
     if config.brave_api_key.is_none() {
         warnings.push(
             "No search provider configured (BRAVE_API_KEY). Search capability will not work."
@@ -869,7 +858,6 @@ fn run_validate_config() -> Result<()> {
         );
     }
 
-    // Check for database
     if std::env::var("DATABASE_URL").is_err() {
         warnings
             .push("No DATABASE_URL set. Will use in-memory storage (not persistent).".to_string());
@@ -946,6 +934,5 @@ fn truncate(s: &str, max_len: usize) -> String {
 }
 
 fn rustc_version() -> &'static str {
-    // This would ideally be set at compile time
     "stable"
 }
