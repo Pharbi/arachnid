@@ -6,9 +6,11 @@ Autonomous agent coordination through semantic resonance.
 
 Arachnid is a runtime where AI agents self-organize to accomplish tasks. Instead of explicit orchestration, agents activate based on signal relevance, like vibrations propagating through a spider web.
 
-## Status: v1.0 Release Candidate
+## Status: v1.0 Stable
 
 Complete autonomous agent coordination system with lifecycle management, PostgreSQL persistence, validation service, HTTP API, and comprehensive capabilities.
+
+**Current version:** 1.0.0 (Phases 1-8 complete)
 
 ## Features
 
@@ -213,9 +215,14 @@ See [Security Guide](.contexts/security.md) for details.
 - [ ] Agent definition templates
 - [ ] Performance optimizations
 
-## v2.0 Architecture (In Progress)
+## v2.0 Architecture (Early Development)
 
-Version 2.0 introduces a flexible definition/instance/tool model, moving from hardcoded capabilities to dynamic agent definitions.
+Version 2.0 will introduce a flexible definition/instance/tool model, moving from hardcoded capabilities to dynamic agent definitions.
+
+**Development Status:** ~30% complete (Phases 9-11)
+- Phase 9 (Definition Architecture): ~40% - Schema and builtin definition done, factory/storage/executor missing
+- Phase 10 (Tool Runtime): ~30% - Tool trait done, 1 of 9 tools implemented
+- Phase 11 (Integration): ~15% - Documentation started, CLI/API/integration pending
 
 ### Key Changes
 
