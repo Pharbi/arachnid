@@ -75,6 +75,35 @@ impl ToolType {
             ToolType::QueryDatabase => "query_database",
         }
     }
+
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "web_search" => Some(ToolType::WebSearch),
+            "fetch_url" => Some(ToolType::FetchUrl),
+            "read_file" => Some(ToolType::ReadFile),
+            "write_file" => Some(ToolType::WriteFile),
+            "execute_code" => Some(ToolType::ExecuteCode),
+            "emit_signal" => Some(ToolType::EmitSignal),
+            "spawn_agent" => Some(ToolType::SpawnAgent),
+            "search_codebase" => Some(ToolType::SearchCodebase),
+            "query_database" => Some(ToolType::QueryDatabase),
+            _ => None,
+        }
+    }
+
+    pub fn all() -> Vec<Self> {
+        vec![
+            ToolType::WebSearch,
+            ToolType::FetchUrl,
+            ToolType::ReadFile,
+            ToolType::WriteFile,
+            ToolType::ExecuteCode,
+            ToolType::EmitSignal,
+            ToolType::SpawnAgent,
+            ToolType::SearchCodebase,
+            ToolType::QueryDatabase,
+        ]
+    }
 }
 
 fn default_temperature() -> f32 {

@@ -1,6 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 
+use crate::definitions::{AgentDefinition, DefinitionId, DefinitionSource};
 use crate::types::{Agent, AgentId, AgentState, Signal, SignalId, Web, WebId, WebState};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -62,4 +63,20 @@ pub trait Storage: Send + Sync {
     // Web memory
     async fn record_failure_pattern(&self, web_id: WebId, pattern: &FailurePattern) -> Result<()>;
     async fn get_failure_patterns(&self, web_id: WebId) -> Result<Vec<FailurePattern>>;
+
+    // Definition operations
+    async fn create_definition(&self, definition: &AgentDefinition) -> Result<()>;
+    async fn get_definition(&self, id: DefinitionId) -> Result<Option<AgentDefinition>>;
+    async fn get_definition_by_name(&self, name: &str) -> Result<Option<AgentDefinition>>;
+    async fn update_definition(&self, definition: &AgentDefinition) -> Result<()>;
+    async fn list_definitions(&self, source: Option<DefinitionSource>) -> Result<Vec<AgentDefinition>>;
+    async fn find_definitions_by_similarity(
+        &self,
+        embedding: &[f32],
+        threshold: f32,
+        sources: &[DefinitionSource],
+        limit: usize,
+    ) -> Result<Vec<(AgentDefinition, f32)>>;
+    async fn increment_definition_use_count(&self, id: DefinitionId) -> Result<()>;
+    async fn update_definition_health(&self, id: DefinitionId, health_delta: f32) -> Result<()>;
 }
