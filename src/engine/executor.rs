@@ -10,12 +10,9 @@ use crate::tools::{ToolCall, ToolContext, ToolResult};
 use crate::tools::runtime::{ToolConfig, ToolRuntime};
 use crate::types::{Agent, Signal, SignalDirection, ExecutionStatus};
 
-/// Configuration for the Agent Executor
 #[derive(Debug, Clone)]
 pub struct ExecutorConfig {
-    /// Maximum tool calls per execution
     pub max_tool_calls: usize,
-    /// Sandbox root for tool execution
     pub sandbox_root: PathBuf,
 }
 
@@ -28,7 +25,6 @@ impl Default for ExecutorConfig {
     }
 }
 
-/// Result of an agent execution
 #[derive(Debug)]
 pub struct AgentExecutionResult {
     pub status: ExecutionStatus,
@@ -37,7 +33,6 @@ pub struct AgentExecutionResult {
     pub tool_results: Vec<ToolResult>,
 }
 
-/// Executor for running agents based on their definitions
 pub struct AgentExecutor {
     storage: Arc<dyn Storage>,
     llm_provider: Arc<dyn LLMProvider>,
@@ -62,25 +57,16 @@ impl AgentExecutor {
         })
     }
 
-    /// Execute an agent with its definition
     pub async fn execute(
         &self,
         agent: &Agent,
         trigger_content: Option<&str>,
     ) -> Result<AgentExecutionResult> {
-        // Get the agent's definition
         let definition = self.get_agent_definition(agent).await?;
-
-        // Build the execution context
         let context = self.build_context(agent, &definition, trigger_content);
-
-        // Build messages for LLM
         let messages = self.build_messages(&definition, &context);
-
-        // Get available tool schemas
         let tool_schemas = self.tool_runtime.get_schemas(&definition.tools);
 
-        // Execute the LLM conversation with potential tool calls
         let (output, tool_results) = self.run_conversation(
             messages,
             &definition.tools,
@@ -88,10 +74,7 @@ impl AgentExecutor {
             agent,
         ).await?;
 
-        // Parse signals from the output
         let signals = self.extract_signals(&output, agent);
-
-        // Determine execution status
         let status = self.determine_status(&output, &tool_results);
 
         Ok(AgentExecutionResult {
@@ -102,7 +85,6 @@ impl AgentExecutor {
         })
     }
 
-    /// Get the definition for an agent
     async fn get_agent_definition(&self, agent: &Agent) -> Result<AgentDefinition> {
         if let Some(def_id) = agent.definition_id {
             if let Some(def) = self.storage.get_definition(def_id).await? {
@@ -110,7 +92,6 @@ impl AgentExecutor {
             }
         }
 
-        // Fallback to a minimal definition for legacy agents
         Ok(AgentDefinition {
             id: uuid::Uuid::nil(),
             name: "legacy-agent".to_string(),
@@ -130,13 +111,11 @@ impl AgentExecutor {
         })
     }
 
-    /// Build context string for the agent
     fn build_context(&self, agent: &Agent, _definition: &AgentDefinition, trigger: Option<&str>) -> String {
         let mut context_parts = vec![
             format!("Purpose: {}", agent.purpose),
         ];
 
-        // Add accumulated knowledge
         if !agent.context.accumulated_knowledge.is_empty() {
             context_parts.push("Accumulated knowledge from child agents:".to_string());
             for item in &agent.context.accumulated_knowledge {
@@ -144,7 +123,6 @@ impl AgentExecutor {
             }
         }
 
-        // Add trigger context
         if let Some(trigger_content) = trigger {
             context_parts.push(format!("Triggered by signal: {}", trigger_content));
         }
@@ -152,7 +130,6 @@ impl AgentExecutor {
         context_parts.join("\n")
     }
 
-    /// Build LLM messages
     fn build_messages(&self, definition: &AgentDefinition, context: &str) -> Vec<Message> {
         vec![
             Message::system(definition.system_prompt.clone()),
@@ -160,7 +137,6 @@ impl AgentExecutor {
         ]
     }
 
-    /// Run a conversation with potential tool calls
     async fn run_conversation(
         &self,
         mut messages: Vec<Message>,
@@ -177,18 +153,13 @@ impl AgentExecutor {
                 return Err(anyhow!("Exceeded maximum tool call iterations"));
             }
 
-            // Call LLM
             let response = self.llm_provider.complete(messages.clone()).await?;
-
-            // Try to parse tool calls from response
             let tool_calls = self.parse_tool_calls(&response, allowed_tools);
 
             if tool_calls.is_empty() {
-                // No more tool calls, return final response
                 return Ok((json!({ "response": response }), all_tool_results));
             }
 
-            // Execute tool calls
             let tool_context = ToolContext {
                 agent_id: agent.id,
                 web_id: agent.web_id,
@@ -206,7 +177,6 @@ impl AgentExecutor {
                 all_tool_results.push(result);
             }
 
-            // Add assistant response and tool results to conversation
             messages.push(Message::assistant(response));
             messages.push(Message::user(format!(
                 "Tool execution results:\n{}",
@@ -215,12 +185,9 @@ impl AgentExecutor {
         }
     }
 
-    /// Parse tool calls from LLM response
     fn parse_tool_calls(&self, response: &str, allowed_tools: &[ToolType]) -> Vec<ToolCall> {
         let mut calls = Vec::new();
 
-        // Look for JSON tool call blocks
-        // Format: {"tool": "tool_name", "params": {...}}
         for line in response.lines() {
             let trimmed = line.trim();
             if trimmed.starts_with('{') && trimmed.contains("\"tool\"") {
@@ -245,14 +212,10 @@ impl AgentExecutor {
         calls
     }
 
-    /// Extract signals from the output
     fn extract_signals(&self, output: &Value, agent: &Agent) -> Vec<Signal> {
         let mut signals = Vec::new();
 
-        // Check for emit_signal in the response
         if let Some(response) = output.get("response").and_then(|r| r.as_str()) {
-            // Look for signal emission patterns
-            // Format: EMIT_SIGNAL: {"direction": "upward", "content": "..."}
             for line in response.lines() {
                 if line.starts_with("EMIT_SIGNAL:") {
                     let json_part = line.trim_start_matches("EMIT_SIGNAL:").trim();
@@ -290,9 +253,7 @@ impl AgentExecutor {
         signals
     }
 
-    /// Determine execution status based on output and tool results
     fn determine_status(&self, output: &Value, tool_results: &[ToolResult]) -> ExecutionStatus {
-        // Check for explicit status in output
         if let Some(response) = output.get("response").and_then(|r| r.as_str()) {
             if response.contains("NEEDS_MORE") {
                 return ExecutionStatus::NeedsMore;
@@ -302,7 +263,6 @@ impl AgentExecutor {
             }
         }
 
-        // Check if any tool failed
         if tool_results.iter().any(|r| !r.success) {
             return ExecutionStatus::Failed;
         }

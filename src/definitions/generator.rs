@@ -30,7 +30,6 @@ impl DefinitionGenerator {
         }
     }
 
-    /// Generate a new agent definition based on the described need
     pub async fn generate(&self, need: &str) -> Result<AgentDefinition> {
         let prompt = self.build_generation_prompt(need);
 
@@ -43,8 +42,6 @@ impl DefinitionGenerator {
             .await?;
 
         let mut definition = self.parse_generated_definition(&response, need)?;
-
-        // Compute embedding for the definition keywords
         definition.tuning_embedding = self.compute_embedding(&definition).await?;
 
         Ok(definition)
@@ -79,7 +76,6 @@ Only output valid YAML, no markdown code fences or explanation."#
     }
 
     fn parse_generated_definition(&self, response: &str, need: &str) -> Result<AgentDefinition> {
-        // Clean up response (remove markdown fences if present)
         let yaml_content = response
             .trim()
             .trim_start_matches("```yaml")
@@ -87,11 +83,9 @@ Only output valid YAML, no markdown code fences or explanation."#
             .trim_end_matches("```")
             .trim();
 
-        // Parse YAML
         let parsed: serde_yaml::Value =
             serde_yaml::from_str(yaml_content).map_err(|e| anyhow!("Failed to parse YAML: {}", e))?;
 
-        // Extract fields with defaults
         let name = parsed["name"]
             .as_str()
             .map(|s| s.to_string())
@@ -129,7 +123,6 @@ Only output valid YAML, no markdown code fences or explanation."#
             })
             .unwrap_or_else(|| vec![ToolType::EmitSignal]);
 
-        // Validate
         if tools.is_empty() {
             return Err(anyhow!("Generated definition has no valid tools"));
         }
@@ -138,7 +131,7 @@ Only output valid YAML, no markdown code fences or explanation."#
             id: Uuid::new_v4(),
             name,
             tuning_keywords,
-            tuning_embedding: vec![], // Computed separately
+            tuning_embedding: vec![],
             system_prompt,
             temperature,
             tools,
@@ -151,7 +144,6 @@ Only output valid YAML, no markdown code fences or explanation."#
     }
 
     fn generate_name_from_need(&self, need: &str) -> String {
-        // Generate a simple name from the need
         let words: Vec<&str> = need
             .split_whitespace()
             .filter(|w| w.len() > 3)
@@ -166,7 +158,6 @@ Only output valid YAML, no markdown code fences or explanation."#
     }
 
     fn extract_keywords_from_need(&self, need: &str) -> Vec<String> {
-        // Extract keywords from the need description
         need.split_whitespace()
             .filter(|w| w.len() > 3)
             .map(|w| w.to_lowercase().trim_matches(|c: char| !c.is_alphanumeric()).to_string())
@@ -216,7 +207,6 @@ mod tests {
         assert!(keywords.contains(&"code".to_string()));
     }
 
-    // Mock providers for testing
     struct MockLLMProvider;
     struct MockEmbeddingProvider;
 
