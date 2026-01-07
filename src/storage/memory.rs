@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+use crate::definitions::{AgentDefinition, DefinitionId, DefinitionSource};
 use crate::engine::resonance::cosine_similarity;
 use crate::storage::traits::{FailurePattern, Storage};
 use crate::types::{Agent, AgentId, AgentState, Signal, SignalId, Web, WebId, WebState};
@@ -35,6 +36,7 @@ pub struct InMemoryStore {
     signals: Arc<RwLock<HashMap<SignalId, Signal>>>,
     processed_signals: Arc<RwLock<HashMap<SignalId, bool>>>,
     failure_patterns: Arc<RwLock<HashMap<uuid::Uuid, FailurePattern>>>,
+    definitions: Arc<RwLock<HashMap<DefinitionId, AgentDefinition>>>,
 }
 
 impl InMemoryStore {
@@ -45,6 +47,7 @@ impl InMemoryStore {
             signals: Arc::new(RwLock::new(HashMap::new())),
             processed_signals: Arc::new(RwLock::new(HashMap::new())),
             failure_patterns: Arc::new(RwLock::new(HashMap::new())),
+            definitions: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 }
@@ -345,6 +348,81 @@ impl Storage for InMemoryStore {
             .filter(|p| p.web_id == web_id)
             .cloned()
             .collect())
+    }
+
+    async fn create_definition(&self, definition: &AgentDefinition) -> Result<()> {
+        let mut definitions = self.definitions.write().unwrap();
+        definitions.insert(definition.id, definition.clone());
+        Ok(())
+    }
+
+    async fn get_definition(&self, id: DefinitionId) -> Result<Option<AgentDefinition>> {
+        let definitions = self.definitions.read().unwrap();
+        Ok(definitions.get(&id).cloned())
+    }
+
+    async fn get_definition_by_name(&self, name: &str) -> Result<Option<AgentDefinition>> {
+        let definitions = self.definitions.read().unwrap();
+        Ok(definitions.values().find(|d| d.name == name).cloned())
+    }
+
+    async fn update_definition(&self, definition: &AgentDefinition) -> Result<()> {
+        let mut definitions = self.definitions.write().unwrap();
+        definitions.insert(definition.id, definition.clone());
+        Ok(())
+    }
+
+    async fn list_definitions(
+        &self,
+        source: Option<DefinitionSource>,
+    ) -> Result<Vec<AgentDefinition>> {
+        let definitions = self.definitions.read().unwrap();
+        let mut result: Vec<AgentDefinition> = definitions
+            .values()
+            .filter(|d| source.is_none() || source == Some(d.source))
+            .cloned()
+            .collect();
+        result.sort_by(|a, b| b.use_count.cmp(&a.use_count));
+        Ok(result)
+    }
+
+    async fn find_definitions_by_similarity(
+        &self,
+        embedding: &[f32],
+        threshold: f32,
+        sources: &[DefinitionSource],
+        limit: usize,
+    ) -> Result<Vec<(AgentDefinition, f32)>> {
+        let definitions = self.definitions.read().unwrap();
+        let mut results: Vec<(AgentDefinition, f32)> = definitions
+            .values()
+            .filter(|d| sources.contains(&d.source) && !d.tuning_embedding.is_empty())
+            .map(|d| {
+                let similarity = cosine_similarity(&d.tuning_embedding, embedding);
+                (d.clone(), similarity)
+            })
+            .filter(|(_, sim)| *sim > threshold)
+            .collect();
+
+        results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        results.truncate(limit);
+        Ok(results)
+    }
+
+    async fn increment_definition_use_count(&self, id: DefinitionId) -> Result<()> {
+        let mut definitions = self.definitions.write().unwrap();
+        if let Some(def) = definitions.get_mut(&id) {
+            def.use_count += 1;
+        }
+        Ok(())
+    }
+
+    async fn update_definition_health(&self, id: DefinitionId, health_delta: f32) -> Result<()> {
+        let mut definitions = self.definitions.write().unwrap();
+        if let Some(def) = definitions.get_mut(&id) {
+            def.health_score = (def.health_score + health_delta).clamp(0.0, 1.0);
+        }
+        Ok(())
     }
 }
 
