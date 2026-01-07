@@ -83,8 +83,8 @@ Only output valid YAML, no markdown code fences or explanation."#
             .trim_end_matches("```")
             .trim();
 
-        let parsed: serde_yaml::Value =
-            serde_yaml::from_str(yaml_content).map_err(|e| anyhow!("Failed to parse YAML: {}", e))?;
+        let parsed: serde_yaml::Value = serde_yaml::from_str(yaml_content)
+            .map_err(|e| anyhow!("Failed to parse YAML: {}", e))?;
 
         let name = parsed["name"]
             .as_str()
@@ -118,7 +118,7 @@ Only output valid YAML, no markdown code fences or explanation."#
             .map(|seq| {
                 seq.iter()
                     .filter_map(|v| v.as_str())
-                    .filter_map(ToolType::from_str)
+                    .filter_map(ToolType::parse)
                     .collect()
             })
             .unwrap_or_else(|| vec![ToolType::EmitSignal]);
@@ -153,14 +153,21 @@ Only output valid YAML, no markdown code fences or explanation."#
         if words.is_empty() {
             "generated-agent".to_string()
         } else {
-            words.join("-").to_lowercase().replace(|c: char| !c.is_alphanumeric() && c != '-', "")
+            words
+                .join("-")
+                .to_lowercase()
+                .replace(|c: char| !c.is_alphanumeric() && c != '-', "")
         }
     }
 
     fn extract_keywords_from_need(&self, need: &str) -> Vec<String> {
         need.split_whitespace()
             .filter(|w| w.len() > 3)
-            .map(|w| w.to_lowercase().trim_matches(|c: char| !c.is_alphanumeric()).to_string())
+            .map(|w| {
+                w.to_lowercase()
+                    .trim_matches(|c: char| !c.is_alphanumeric())
+                    .to_string()
+            })
             .filter(|w| !w.is_empty())
             .take(10)
             .collect()
@@ -200,7 +207,8 @@ mod tests {
             embedding_provider: Arc::new(MockEmbeddingProvider),
         };
 
-        let keywords = generator.extract_keywords_from_need("analyze security vulnerabilities in code");
+        let keywords =
+            generator.extract_keywords_from_need("analyze security vulnerabilities in code");
         assert!(keywords.contains(&"analyze".to_string()));
         assert!(keywords.contains(&"security".to_string()));
         assert!(keywords.contains(&"vulnerabilities".to_string()));

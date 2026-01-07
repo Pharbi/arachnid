@@ -372,7 +372,10 @@ impl Storage for InMemoryStore {
         Ok(())
     }
 
-    async fn list_definitions(&self, source: Option<DefinitionSource>) -> Result<Vec<AgentDefinition>> {
+    async fn list_definitions(
+        &self,
+        source: Option<DefinitionSource>,
+    ) -> Result<Vec<AgentDefinition>> {
         let definitions = self.definitions.read().unwrap();
         let mut result: Vec<AgentDefinition> = definitions
             .values()
@@ -393,9 +396,7 @@ impl Storage for InMemoryStore {
         let definitions = self.definitions.read().unwrap();
         let mut results: Vec<(AgentDefinition, f32)> = definitions
             .values()
-            .filter(|d| {
-                sources.contains(&d.source) && !d.tuning_embedding.is_empty()
-            })
+            .filter(|d| sources.contains(&d.source) && !d.tuning_embedding.is_empty())
             .map(|d| {
                 let similarity = cosine_similarity(&d.tuning_embedding, embedding);
                 (d.clone(), similarity)

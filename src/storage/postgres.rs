@@ -493,7 +493,11 @@ impl Storage for PostgresStorage {
         } else {
             Some(Vector::from(definition.tuning_embedding.clone()))
         };
-        let tools: Vec<String> = definition.tools.iter().map(|t| t.as_str().to_string()).collect();
+        let tools: Vec<String> = definition
+            .tools
+            .iter()
+            .map(|t| t.as_str().to_string())
+            .collect();
 
         sqlx::query(
             r#"
@@ -568,7 +572,11 @@ impl Storage for PostgresStorage {
         } else {
             Some(Vector::from(definition.tuning_embedding.clone()))
         };
-        let tools: Vec<String> = definition.tools.iter().map(|t| t.as_str().to_string()).collect();
+        let tools: Vec<String> = definition
+            .tools
+            .iter()
+            .map(|t| t.as_str().to_string())
+            .collect();
 
         sqlx::query(
             r#"
@@ -595,7 +603,10 @@ impl Storage for PostgresStorage {
         Ok(())
     }
 
-    async fn list_definitions(&self, source: Option<DefinitionSource>) -> Result<Vec<AgentDefinition>> {
+    async fn list_definitions(
+        &self,
+        source: Option<DefinitionSource>,
+    ) -> Result<Vec<AgentDefinition>> {
         let rows = match source {
             Some(s) => {
                 sqlx::query(
@@ -789,7 +800,7 @@ fn row_to_definition(r: &sqlx::postgres::PgRow) -> Result<AgentDefinition> {
     let tools_strs: Vec<String> = r.get("tools");
     let tools: Vec<ToolType> = tools_strs
         .iter()
-        .filter_map(|s| ToolType::from_str(s))
+        .filter_map(|s| ToolType::parse(s))
         .collect();
 
     let source_str: String = r.get("source");

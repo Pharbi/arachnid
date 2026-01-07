@@ -6,9 +6,9 @@ use std::sync::Arc;
 use crate::definitions::{AgentDefinition, ToolType};
 use crate::providers::{LLMProvider, Message};
 use crate::storage::traits::Storage;
-use crate::tools::{ToolCall, ToolContext, ToolResult};
 use crate::tools::runtime::{ToolConfig, ToolRuntime};
-use crate::types::{Agent, Signal, SignalDirection, ExecutionStatus};
+use crate::tools::{ToolCall, ToolContext, ToolResult};
+use crate::types::{Agent, ExecutionStatus, Signal, SignalDirection};
 
 #[derive(Debug, Clone)]
 pub struct ExecutorConfig {
@@ -67,12 +67,9 @@ impl AgentExecutor {
         let messages = self.build_messages(&definition, &context);
         let tool_schemas = self.tool_runtime.get_schemas(&definition.tools);
 
-        let (output, tool_results) = self.run_conversation(
-            messages,
-            &definition.tools,
-            &tool_schemas,
-            agent,
-        ).await?;
+        let (output, tool_results) = self
+            .run_conversation(messages, &definition.tools, &tool_schemas, agent)
+            .await?;
 
         let signals = self.extract_signals(&output, agent);
         let status = self.determine_status(&output, &tool_results);
@@ -111,10 +108,13 @@ impl AgentExecutor {
         })
     }
 
-    fn build_context(&self, agent: &Agent, _definition: &AgentDefinition, trigger: Option<&str>) -> String {
-        let mut context_parts = vec![
-            format!("Purpose: {}", agent.purpose),
-        ];
+    fn build_context(
+        &self,
+        agent: &Agent,
+        _definition: &AgentDefinition,
+        trigger: Option<&str>,
+    ) -> String {
+        let mut context_parts = vec![format!("Purpose: {}", agent.purpose)];
 
         if !agent.context.accumulated_knowledge.is_empty() {
             context_parts.push("Accumulated knowledge from child agents:".to_string());
@@ -196,7 +196,7 @@ impl AgentExecutor {
                         parsed.get("tool").and_then(|t| t.as_str()),
                         parsed.get("params").cloned(),
                     ) {
-                        if let Some(tool_type) = ToolType::from_str(tool_name) {
+                        if let Some(tool_type) = ToolType::parse(tool_name) {
                             if allowed_tools.contains(&tool_type) {
                                 calls.push(ToolCall {
                                     tool_type,

@@ -5,5 +5,5 @@ pub mod propagation;
 pub mod resonance;
 pub mod spawning;
 
-pub use executor::{AgentExecutor, AgentExecutionResult, ExecutorConfig};
+pub use executor::{AgentExecutionResult, AgentExecutor, ExecutorConfig};
 pub use lifecycle_management::{ConvergenceDetector, LifecycleManager};

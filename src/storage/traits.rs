@@ -69,7 +69,10 @@ pub trait Storage: Send + Sync {
     async fn get_definition(&self, id: DefinitionId) -> Result<Option<AgentDefinition>>;
     async fn get_definition_by_name(&self, name: &str) -> Result<Option<AgentDefinition>>;
     async fn update_definition(&self, definition: &AgentDefinition) -> Result<()>;
-    async fn list_definitions(&self, source: Option<DefinitionSource>) -> Result<Vec<AgentDefinition>>;
+    async fn list_definitions(
+        &self,
+        source: Option<DefinitionSource>,
+    ) -> Result<Vec<AgentDefinition>>;
     async fn find_definitions_by_similarity(
         &self,
         embedding: &[f32],

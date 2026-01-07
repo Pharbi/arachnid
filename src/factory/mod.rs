@@ -41,10 +41,7 @@ impl AgentFactory {
         embedding_provider: Arc<dyn EmbeddingProvider>,
         config: FactoryConfig,
     ) -> Self {
-        let generator = DefinitionGenerator::new(
-            llm_provider,
-            embedding_provider.clone(),
-        );
+        let generator = DefinitionGenerator::new(llm_provider, embedding_provider.clone());
 
         Self {
             storage,
@@ -66,7 +63,9 @@ impl AgentFactory {
         web_config: &WebConfig,
     ) -> Result<Agent> {
         let definition = self.find_or_generate_definition(need).await?;
-        self.storage.increment_definition_use_count(definition.id).await?;
+        self.storage
+            .increment_definition_use_count(definition.id)
+            .await?;
         let tuning = self.compute_instance_tuning(&definition, need).await?;
 
         let agent = Agent::from_definition(
@@ -89,7 +88,9 @@ impl AgentFactory {
         web_config: &WebConfig,
         purpose: &str,
     ) -> Result<Agent> {
-        self.storage.increment_definition_use_count(definition.id).await?;
+        self.storage
+            .increment_definition_use_count(definition.id)
+            .await?;
 
         let tuning = if definition.tuning_embedding.is_empty() {
             self.embedding_provider.embed(purpose).await?
@@ -112,17 +113,17 @@ impl AgentFactory {
     pub async fn find_or_generate_definition(&self, need: &str) -> Result<AgentDefinition> {
         let need_embedding = self.embedding_provider.embed(need).await?;
 
-        if let Some(def) = self.find_matching_definition(
-            &need_embedding,
-            &[DefinitionSource::UserCustom],
-        ).await? {
+        if let Some(def) = self
+            .find_matching_definition(&need_embedding, &[DefinitionSource::UserCustom])
+            .await?
+        {
             return Ok(def);
         }
 
-        if let Some(def) = self.find_matching_definition(
-            &need_embedding,
-            &[DefinitionSource::Generated],
-        ).await? {
+        if let Some(def) = self
+            .find_matching_definition(&need_embedding, &[DefinitionSource::Generated])
+            .await?
+        {
             return Ok(def);
         }
 
@@ -140,27 +141,26 @@ impl AgentFactory {
         embedding: &[f32],
         sources: &[DefinitionSource],
     ) -> Result<Option<AgentDefinition>> {
-        let matches = self.storage.find_definitions_by_similarity(
-            embedding,
-            self.config.definition_match_threshold,
-            sources,
-            1,
-        ).await?;
+        let matches = self
+            .storage
+            .find_definitions_by_similarity(
+                embedding,
+                self.config.definition_match_threshold,
+                sources,
+                1,
+            )
+            .await?;
 
         Ok(matches.into_iter().next().map(|(def, _)| def))
     }
 
-    pub async fn check_dormant_agents(
-        &self,
-        need: &str,
-        web_id: WebId,
-    ) -> Result<Option<AgentId>> {
+    pub async fn check_dormant_agents(&self, need: &str, web_id: WebId) -> Result<Option<AgentId>> {
         let need_embedding = self.embedding_provider.embed(need).await?;
 
-        let dormant = self.storage.get_agents_by_state(
-            web_id,
-            crate::types::AgentState::Dormant,
-        ).await?;
+        let dormant = self
+            .storage
+            .get_agents_by_state(web_id, crate::types::AgentState::Dormant)
+            .await?;
 
         for agent in dormant {
             let similarity = cosine_similarity(&agent.tuning, &need_embedding);
@@ -183,7 +183,9 @@ impl AgentFactory {
             return Ok(need_embedding);
         }
 
-        let blended: Vec<f32> = definition.tuning_embedding.iter()
+        let blended: Vec<f32> = definition
+            .tuning_embedding
+            .iter()
             .zip(need_embedding.iter())
             .map(|(d, n)| 0.7 * d + 0.3 * n)
             .collect();
@@ -200,7 +202,10 @@ impl AgentFactory {
         self.storage.get_definition(id).await
     }
 
-    pub async fn list_definitions(&self, source: Option<DefinitionSource>) -> Result<Vec<AgentDefinition>> {
+    pub async fn list_definitions(
+        &self,
+        source: Option<DefinitionSource>,
+    ) -> Result<Vec<AgentDefinition>> {
         self.storage.list_definitions(source).await
     }
 }

@@ -115,10 +115,16 @@ async fn test_definition_crud_operations() {
     assert_eq!(all_defs.len(), 1);
 
     // List by source
-    let user_defs = store.list_definitions(Some(DefinitionSource::UserCustom)).await.unwrap();
+    let user_defs = store
+        .list_definitions(Some(DefinitionSource::UserCustom))
+        .await
+        .unwrap();
     assert_eq!(user_defs.len(), 1);
 
-    let builtin_defs = store.list_definitions(Some(DefinitionSource::BuiltIn)).await.unwrap();
+    let builtin_defs = store
+        .list_definitions(Some(DefinitionSource::BuiltIn))
+        .await
+        .unwrap();
     assert_eq!(builtin_defs.len(), 0);
 }
 
@@ -248,8 +254,12 @@ async fn test_factory_spawns_agent_from_existing_definition() {
     );
 
     // Create a definition with an embedding
-    let mut def = create_test_definition("research-agent", vec!["research", "investigate", "analyze"]);
-    def.tuning_embedding = mock_embedding.embed("research investigate analyze").await.unwrap();
+    let mut def =
+        create_test_definition("research-agent", vec!["research", "investigate", "analyze"]);
+    def.tuning_embedding = mock_embedding
+        .embed("research investigate analyze")
+        .await
+        .unwrap();
     store.create_definition(&def).await.unwrap();
 
     // Spawn agent from definition
@@ -332,10 +342,10 @@ fn test_tool_type_conversions() {
     assert_eq!(ToolType::SearchCodebase.as_str(), "search_codebase");
     assert_eq!(ToolType::QueryDatabase.as_str(), "query_database");
 
-    // Test from_str
-    assert_eq!(ToolType::from_str("web_search"), Some(ToolType::WebSearch));
-    assert_eq!(ToolType::from_str("emit_signal"), Some(ToolType::EmitSignal));
-    assert_eq!(ToolType::from_str("invalid"), None);
+    // Test parse
+    assert_eq!(ToolType::parse("web_search"), Some(ToolType::WebSearch));
+    assert_eq!(ToolType::parse("emit_signal"), Some(ToolType::EmitSignal));
+    assert_eq!(ToolType::parse("invalid"), None);
 
     // Test all()
     let all_tools = ToolType::all();

@@ -76,7 +76,7 @@ impl ToolType {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s {
             "web_search" => Some(ToolType::WebSearch),
             "fetch_url" => Some(ToolType::FetchUrl),
