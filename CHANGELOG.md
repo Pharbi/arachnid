@@ -14,7 +14,7 @@ All notable changes to this project will be documented in this file.
 - Capabilities: Search, Synthesizer, Code Writer, Code Reviewer, Analyst
 - Provider support: Anthropic, OpenAI, Ollama (local LLM), Brave Search, Cohere
 - Full CLI with run (with --watch mode), serve, status, web, agent, migrate, config, and validate-config commands
-- MIT License
+- Apache 2.0 License
 - Comprehensive test suite with 77 passing tests
 - Database migrations with pgvector support
 
