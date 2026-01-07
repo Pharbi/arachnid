@@ -41,29 +41,40 @@ impl<S: WebStore> CoordinationEngine<S> {
                 break;
             }
 
-            if self.check_convergence(web_id).await? {
-                self.mark_web_converged(web_id)?;
+            let should_continue = self.run_single_iteration(web_id).await?;
+            if !should_continue {
                 break;
-            }
-
-            let pending_signals = self.store.get_pending_signals(web_id)?;
-            if pending_signals.is_empty() {
-                let active_agents = self.get_active_agents(web_id)?;
-                if active_agents.is_empty() {
-                    self.mark_web_converged(web_id)?;
-                    break;
-                }
-            }
-
-            for signal in pending_signals {
-                self.process_signal(&signal).await?;
-                self.store.mark_signal_processed(&signal.id)?;
             }
 
             tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         }
 
         Ok(())
+    }
+
+    /// Run a single iteration of the coordination loop.
+    /// Returns `true` if the loop should continue, `false` if it should stop.
+    pub async fn run_single_iteration(&self, web_id: &uuid::Uuid) -> Result<bool> {
+        if self.check_convergence(web_id).await? {
+            self.mark_web_converged(web_id)?;
+            return Ok(false);
+        }
+
+        let pending_signals = self.store.get_pending_signals(web_id)?;
+        if pending_signals.is_empty() {
+            let active_agents = self.get_active_agents(web_id)?;
+            if active_agents.is_empty() {
+                self.mark_web_converged(web_id)?;
+                return Ok(false);
+            }
+        }
+
+        for signal in pending_signals {
+            self.process_signal(&signal).await?;
+            self.store.mark_signal_processed(&signal.id)?;
+        }
+
+        Ok(true)
     }
 
     async fn process_signal(&self, signal: &Signal) -> Result<()> {
