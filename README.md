@@ -162,7 +162,7 @@ export BRAVE_API_KEY=BSA...
 
 ## Test Coverage
 
-72 unit tests covering:
+77 unit tests covering:
 - Core coordination and resonance
 - Signal propagation with attenuation
 - Lifecycle management and state transitions
@@ -271,7 +271,7 @@ tools:
 
 ## License
 
-MIT
+Apache-2.0
 
 ## Acknowledgments
 

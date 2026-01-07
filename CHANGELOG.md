@@ -13,8 +13,9 @@ All notable changes to this project will be documented in this file.
 - HTTP API with SSE event streaming
 - Capabilities: Search, Synthesizer, Code Writer, Code Reviewer, Analyst
 - Provider support: Anthropic, OpenAI, Ollama (local LLM), Brave Search, Cohere
-- CLI with run, serve, status, and configuration commands
-- Comprehensive test suite with 72 passing tests
+- Full CLI with run (with --watch mode), serve, status, web, agent, migrate, config, and validate-config commands
+- Apache 2.0 License
+- Comprehensive test suite with 77 passing tests
 - Database migrations with pgvector support
 
 ### Documentation
