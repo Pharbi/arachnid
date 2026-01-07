@@ -15,6 +15,7 @@ pub struct ToolContext {
     pub sandbox_path: PathBuf,
 }
 
+#[derive(Debug)]
 pub struct ToolResult {
     pub success: bool,
     pub output: Value,

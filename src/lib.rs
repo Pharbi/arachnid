@@ -3,6 +3,7 @@ pub mod capabilities;
 pub mod config;
 pub mod definitions;
 pub mod engine;
+pub mod factory;
 pub mod lifecycle;
 pub mod providers;
 pub mod storage;

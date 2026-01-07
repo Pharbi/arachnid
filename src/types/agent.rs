@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::{AgentId, AgentState, CapabilityType, WebId};
+use crate::definitions::DefinitionId;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Agent {
@@ -20,6 +21,9 @@ pub struct Agent {
     pub created_at: DateTime<Utc>,
     pub last_active_at: DateTime<Utc>,
     pub dormant_since: Option<DateTime<Utc>>,
+    // v2.0: Link to agent definition (optional for backward compatibility)
+    #[serde(default)]
+    pub definition_id: Option<DefinitionId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,6 +67,39 @@ impl Agent {
             created_at: now,
             last_active_at: now,
             dormant_since: None,
+            definition_id: None,
+        }
+    }
+
+    /// Create an agent from a definition (v2.0)
+    pub fn from_definition(
+        definition_id: DefinitionId,
+        web_id: WebId,
+        parent_id: Option<AgentId>,
+        purpose: String,
+        tuning: Vec<f32>,
+        activation_threshold: f32,
+    ) -> Self {
+        let now = Utc::now();
+        Self {
+            id: AgentId::new_v4(),
+            web_id,
+            parent_id,
+            purpose: purpose.clone(),
+            tuning,
+            capability: CapabilityType::Custom("definition-based".to_string()),
+            state: AgentState::Listening,
+            health: 1.0,
+            activation_threshold,
+            context: AgentContext {
+                purpose,
+                accumulated_knowledge: Vec::new(),
+            },
+            probation_remaining: 5,
+            created_at: now,
+            last_active_at: now,
+            dormant_since: None,
+            definition_id: Some(definition_id),
         }
     }
 
