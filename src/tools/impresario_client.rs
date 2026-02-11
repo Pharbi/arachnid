@@ -95,7 +95,8 @@ impl ImpresarioClient {
 
     pub async fn write_file(&self, path: &str, content: &str) -> Result<()> {
         let safe_content = content.replace('\'', "'\\''");
-        let command = format!("cat > {} <<'ARACHNID_EOF'\n{}\nARACHNID_EOF",
+        let command = format!(
+            "cat > {} <<'ARACHNID_EOF'\n{}\nARACHNID_EOF",
             shell_quote(path),
             safe_content
         );
@@ -116,7 +117,8 @@ impl ImpresarioClient {
             return Err(anyhow!("Failed to list directory: {}", result.stderr));
         }
 
-        Ok(result.stdout
+        Ok(result
+            .stdout
             .lines()
             .map(|s| s.to_string())
             .filter(|s| !s.is_empty())
@@ -124,22 +126,31 @@ impl ImpresarioClient {
     }
 
     pub async fn file_exists(&self, path: &str) -> Result<bool> {
-        let result = self.exec(&format!("test -f {} && echo exists", shell_quote(path))).await?;
+        let result = self
+            .exec(&format!("test -f {} && echo exists", shell_quote(path)))
+            .await?;
         Ok(result.stdout.trim() == "exists")
     }
 
     pub async fn create_checkpoint(&self, name: &str) -> Result<()> {
-        let result = self.exec(&format!("dais checkpoint create {}", shell_quote(name))).await?;
+        let result = self
+            .exec(&format!("dais checkpoint create {}", shell_quote(name)))
+            .await?;
 
         if !result.success {
-            log::warn!("Checkpoint creation failed (dais may not be installed): {}", result.stderr);
+            log::warn!(
+                "Checkpoint creation failed (dais may not be installed): {}",
+                result.stderr
+            );
         }
 
         Ok(())
     }
 
     pub async fn restore_checkpoint(&self, name: &str) -> Result<()> {
-        let result = self.exec(&format!("dais checkpoint restore {}", shell_quote(name))).await?;
+        let result = self
+            .exec(&format!("dais checkpoint restore {}", shell_quote(name)))
+            .await?;
 
         if !result.success {
             return Err(anyhow!("Failed to restore checkpoint: {}", result.stderr));

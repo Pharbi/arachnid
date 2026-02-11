@@ -1,9 +1,9 @@
 use arachnid::definitions::ToolType;
 use arachnid::tools::fetch_url::FetchUrlTool;
 use arachnid::tools::{Tool, ToolContext};
-use arachnid::types::{AgentId, WebId};
 use serde_json::json;
 use std::path::PathBuf;
+use uuid::Uuid;
 
 #[test]
 fn test_fetch_url_tool_metadata() {
@@ -34,8 +34,8 @@ async fn test_fetch_url_requires_http_protocol() {
     });
 
     let context = ToolContext {
-        agent_id: AgentId::new(),
-        web_id: WebId::new(),
+        agent_id: Uuid::new_v4(),
+        web_id: Uuid::new_v4(),
         sandbox_path: PathBuf::from("/tmp"),
     };
 
@@ -54,8 +54,8 @@ async fn test_fetch_url_params_validation() {
     });
 
     let context = ToolContext {
-        agent_id: AgentId::new(),
-        web_id: WebId::new(),
+        agent_id: Uuid::new_v4(),
+        web_id: Uuid::new_v4(),
         sandbox_path: PathBuf::from("/tmp"),
     };
 

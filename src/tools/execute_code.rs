@@ -3,14 +3,13 @@ use async_trait::async_trait;
 use serde_json::{json, Value};
 use uuid::Uuid;
 
-use super::impresario_client::{ImpresarioClient, ExecResult};
+use super::impresario_client::{ExecResult, ImpresarioClient};
 use super::{SideEffect, Tool, ToolContext, ToolResult};
 use crate::definitions::ToolType;
 
 pub struct ExecuteCodeTool {
     client: ImpresarioClient,
     enable_checkpoints: bool,
-    timeout_secs: u64,
 }
 
 impl ExecuteCodeTool {
@@ -19,15 +18,9 @@ impl ExecuteCodeTool {
             .unwrap_or_else(|_| "true".to_string())
             == "true";
 
-        let timeout_secs = std::env::var("EXECUTE_CODE_TIMEOUT")
-            .ok()
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(300);
-
         Self {
             client,
             enable_checkpoints,
-            timeout_secs,
         }
     }
 
@@ -66,7 +59,10 @@ impl ExecuteCodeTool {
 
         let exec_result = self.client.exec(&temp_bin).await?;
 
-        let _ = self.client.exec(&format!("rm {} {}", temp_file, temp_bin)).await;
+        let _ = self
+            .client
+            .exec(&format!("rm {} {}", temp_file, temp_bin))
+            .await;
 
         Ok(exec_result)
     }
@@ -113,7 +109,7 @@ impl Tool for ExecuteCodeTool {
         })
     }
 
-    async fn execute(&self, params: Value, context: &ToolContext) -> Result<ToolResult> {
+    async fn execute(&self, params: Value, _context: &ToolContext) -> Result<ToolResult> {
         let language = params["language"]
             .as_str()
             .ok_or_else(|| anyhow!("Missing language parameter"))?;

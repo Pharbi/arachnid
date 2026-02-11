@@ -7,7 +7,6 @@ use crate::definitions::ToolType;
 
 pub struct FetchUrlTool {
     client: reqwest::Client,
-    timeout_secs: u64,
 }
 
 impl FetchUrlTool {
@@ -22,10 +21,7 @@ impl FetchUrlTool {
             .user_agent("Arachnid/1.0")
             .build()?;
 
-        Ok(Self {
-            client,
-            timeout_secs,
-        })
+        Ok(Self { client })
     }
 
     async fn fetch_and_extract(&self, url: &str) -> Result<FetchedContent> {

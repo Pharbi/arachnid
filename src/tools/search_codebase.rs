@@ -16,12 +16,12 @@ impl SearchCodebaseTool {
         Self { sandbox_root }
     }
 
-    async fn search_regex(&self, pattern: &str, file_pattern: Option<&str>) -> Result<Vec<SearchMatch>> {
-        let mut args = vec![
-            "--json".to_string(),
-            "-n".to_string(),
-            pattern.to_string(),
-        ];
+    async fn search_regex(
+        &self,
+        pattern: &str,
+        file_pattern: Option<&str>,
+    ) -> Result<Vec<SearchMatch>> {
+        let mut args = vec!["--json".to_string(), "-n".to_string(), pattern.to_string()];
 
         if let Some(fp) = file_pattern {
             args.push("--glob".to_string());
@@ -30,12 +30,8 @@ impl SearchCodebaseTool {
 
         args.push(self.sandbox_root.to_str().unwrap().to_string());
 
-        let output = tokio::task::spawn_blocking(move || {
-            Command::new("rg")
-                .args(&args)
-                .output()
-        })
-        .await??;
+        let output =
+            tokio::task::spawn_blocking(move || Command::new("rg").args(&args).output()).await??;
 
         if !output.status.success() && output.status.code() != Some(1) {
             return Err(anyhow!(
@@ -61,10 +57,14 @@ impl SearchCodebaseTool {
         Ok(matches)
     }
 
-    async fn search_content(&self, query: &str, file_pattern: Option<&str>) -> Result<Vec<SearchMatch>> {
+    async fn search_content(
+        &self,
+        query: &str,
+        file_pattern: Option<&str>,
+    ) -> Result<Vec<SearchMatch>> {
         let pattern = query
             .split_whitespace()
-            .map(|word| regex::escape(word))
+            .map(regex::escape)
             .collect::<Vec<_>>()
             .join("|");
 
@@ -213,8 +213,8 @@ mod tests {
         });
 
         let context = ToolContext {
-            agent_id: crate::types::AgentId::new(),
-            web_id: crate::types::WebId::new(),
+            agent_id: uuid::Uuid::new_v4(),
+            web_id: uuid::Uuid::new_v4(),
             sandbox_path: temp_dir.path().to_path_buf(),
         };
 
@@ -243,8 +243,8 @@ mod tests {
         });
 
         let context = ToolContext {
-            agent_id: crate::types::AgentId::new(),
-            web_id: crate::types::WebId::new(),
+            agent_id: uuid::Uuid::new_v4(),
+            web_id: uuid::Uuid::new_v4(),
             sandbox_path: temp_dir.path().to_path_buf(),
         };
 

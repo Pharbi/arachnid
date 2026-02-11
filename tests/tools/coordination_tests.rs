@@ -1,9 +1,10 @@
 use arachnid::tools::emit_signal::EmitSignalTool;
 use arachnid::tools::spawn_agent::SpawnAgentTool;
 use arachnid::tools::{SideEffect, Tool, ToolContext};
-use arachnid::types::{AgentId, SignalDirection, WebId};
+use arachnid::types::SignalDirection;
 use serde_json::json;
 use std::path::PathBuf;
+use uuid::Uuid;
 
 #[tokio::test]
 async fn test_emit_signal_upward() {
@@ -15,8 +16,8 @@ async fn test_emit_signal_upward() {
     });
 
     let context = ToolContext {
-        agent_id: AgentId::new(),
-        web_id: WebId::new(),
+        agent_id: Uuid::new_v4(),
+        web_id: Uuid::new_v4(),
         sandbox_path: PathBuf::from("/tmp"),
     };
 
@@ -47,8 +48,8 @@ async fn test_emit_signal_downward() {
     });
 
     let context = ToolContext {
-        agent_id: AgentId::new(),
-        web_id: WebId::new(),
+        agent_id: Uuid::new_v4(),
+        web_id: Uuid::new_v4(),
         sandbox_path: PathBuf::from("/tmp"),
     };
 
@@ -79,8 +80,8 @@ async fn test_emit_signal_with_payload() {
     });
 
     let context = ToolContext {
-        agent_id: AgentId::new(),
-        web_id: WebId::new(),
+        agent_id: Uuid::new_v4(),
+        web_id: Uuid::new_v4(),
         sandbox_path: PathBuf::from("/tmp"),
     };
 
@@ -108,8 +109,8 @@ async fn test_emit_signal_defaults_to_upward() {
     });
 
     let context = ToolContext {
-        agent_id: AgentId::new(),
-        web_id: WebId::new(),
+        agent_id: Uuid::new_v4(),
+        web_id: Uuid::new_v4(),
         sandbox_path: PathBuf::from("/tmp"),
     };
 
@@ -126,8 +127,8 @@ async fn test_spawn_agent_basic() {
     });
 
     let context = ToolContext {
-        agent_id: AgentId::new(),
-        web_id: WebId::new(),
+        agent_id: Uuid::new_v4(),
+        web_id: Uuid::new_v4(),
         sandbox_path: PathBuf::from("/tmp"),
     };
 
@@ -154,8 +155,8 @@ async fn test_spawn_agent_with_suggestion_and_context() {
     });
 
     let context = ToolContext {
-        agent_id: AgentId::new(),
-        web_id: WebId::new(),
+        agent_id: Uuid::new_v4(),
+        web_id: Uuid::new_v4(),
         sandbox_path: PathBuf::from("/tmp"),
     };
 
@@ -178,8 +179,8 @@ async fn test_spawn_agent_missing_need_parameter() {
     });
 
     let context = ToolContext {
-        agent_id: AgentId::new(),
-        web_id: WebId::new(),
+        agent_id: Uuid::new_v4(),
+        web_id: Uuid::new_v4(),
         sandbox_path: PathBuf::from("/tmp"),
     };
 

@@ -7,6 +7,12 @@ use crate::definitions::ToolType;
 
 pub struct SpawnAgentTool {}
 
+impl Default for SpawnAgentTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SpawnAgentTool {
     pub fn new() -> Self {
         Self {}
@@ -75,7 +81,6 @@ impl Tool for SpawnAgentTool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{AgentId, WebId};
     use std::path::PathBuf;
 
     #[tokio::test]
@@ -87,8 +92,8 @@ mod tests {
         });
 
         let context = ToolContext {
-            agent_id: AgentId::new(),
-            web_id: WebId::new(),
+            agent_id: uuid::Uuid::new_v4(),
+            web_id: uuid::Uuid::new_v4(),
             sandbox_path: PathBuf::from("/tmp"),
         };
 
@@ -100,7 +105,10 @@ mod tests {
             result.output["need"],
             "Analyze security vulnerabilities in the authentication code"
         );
-        assert_eq!(result.output["parent_agent_id"], context.agent_id.to_string());
+        assert_eq!(
+            result.output["parent_agent_id"],
+            context.agent_id.to_string()
+        );
     }
 
     #[tokio::test]
@@ -114,8 +122,8 @@ mod tests {
         });
 
         let context = ToolContext {
-            agent_id: AgentId::new(),
-            web_id: WebId::new(),
+            agent_id: uuid::Uuid::new_v4(),
+            web_id: uuid::Uuid::new_v4(),
             sandbox_path: PathBuf::from("/tmp"),
         };
 

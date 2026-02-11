@@ -1,13 +1,29 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use serde_json::{json, Value};
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
 use tokio::fs::{self, OpenOptions};
 use tokio::io::AsyncWriteExt;
 
 use super::impresario_client::ImpresarioClient;
 use super::{Artifact, SideEffect, Tool, ToolContext, ToolResult};
 use crate::definitions::ToolType;
+
+fn normalize_path(path: &Path) -> PathBuf {
+    let mut components = Vec::new();
+    for component in path.components() {
+        match component {
+            Component::ParentDir => {
+                if !components.is_empty() {
+                    components.pop();
+                }
+            }
+            Component::CurDir => {}
+            _ => components.push(component),
+        }
+    }
+    components.iter().collect()
+}
 
 pub enum WriteFileMode {
     Local,
@@ -41,7 +57,11 @@ impl WriteFileTool {
             self.sandbox_root.join(path)
         };
 
-        if !full_path.starts_with(&self.sandbox_root) {
+        // Normalize the path by resolving .. and . components
+        let normalized = normalize_path(&full_path);
+
+        // Check if the normalized path is within the sandbox
+        if !normalized.starts_with(&self.sandbox_root) {
             return Err(anyhow!("Path escapes sandbox: {}", path));
         }
 
@@ -114,7 +134,9 @@ impl Tool for WriteFileTool {
                 }
             }
             WriteFileMode::Remote(client) => {
-                client.write_file(validated_path.to_str().unwrap(), content).await?;
+                client
+                    .write_file(validated_path.to_str().unwrap(), content)
+                    .await?;
             }
         }
 
@@ -158,8 +180,8 @@ mod tests {
         });
 
         let context = ToolContext {
-            agent_id: crate::types::AgentId::new(),
-            web_id: crate::types::WebId::new(),
+            agent_id: uuid::Uuid::new_v4(),
+            web_id: uuid::Uuid::new_v4(),
             sandbox_path: temp_dir.path().to_path_buf(),
         };
 
@@ -189,8 +211,8 @@ mod tests {
         });
 
         let context = ToolContext {
-            agent_id: crate::types::AgentId::new(),
-            web_id: crate::types::WebId::new(),
+            agent_id: uuid::Uuid::new_v4(),
+            web_id: uuid::Uuid::new_v4(),
             sandbox_path: temp_dir.path().to_path_buf(),
         };
 
@@ -211,8 +233,8 @@ mod tests {
         });
 
         let context = ToolContext {
-            agent_id: crate::types::AgentId::new(),
-            web_id: crate::types::WebId::new(),
+            agent_id: uuid::Uuid::new_v4(),
+            web_id: uuid::Uuid::new_v4(),
             sandbox_path: temp_dir.path().to_path_buf(),
         };
 

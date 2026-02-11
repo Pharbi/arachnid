@@ -8,6 +8,12 @@ use crate::types::{Signal, SignalDirection};
 
 pub struct EmitSignalTool {}
 
+impl Default for EmitSignalTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EmitSignalTool {
     pub fn new() -> Self {
         Self {}
@@ -66,13 +72,16 @@ impl Tool for EmitSignalTool {
 
         let payload = params.get("payload").cloned();
 
-        let signal = Signal::new(
+        let mut signal = Signal::new(
             context.agent_id,
-            context.web_id,
+            vec![], // Frequency will be calculated by the engine
             content.to_string(),
             direction,
-            payload,
         );
+
+        if let Some(p) = payload {
+            signal = signal.with_payload(p);
+        }
 
         Ok(ToolResult {
             success: true,
@@ -91,7 +100,6 @@ impl Tool for EmitSignalTool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{AgentId, WebId};
     use std::path::PathBuf;
 
     #[tokio::test]
@@ -104,8 +112,8 @@ mod tests {
         });
 
         let context = ToolContext {
-            agent_id: AgentId::new(),
-            web_id: WebId::new(),
+            agent_id: uuid::Uuid::new_v4(),
+            web_id: uuid::Uuid::new_v4(),
             sandbox_path: PathBuf::from("/tmp"),
         };
 
@@ -139,8 +147,8 @@ mod tests {
         });
 
         let context = ToolContext {
-            agent_id: AgentId::new(),
-            web_id: WebId::new(),
+            agent_id: uuid::Uuid::new_v4(),
+            web_id: uuid::Uuid::new_v4(),
             sandbox_path: PathBuf::from("/tmp"),
         };
 
@@ -167,8 +175,8 @@ mod tests {
         });
 
         let context = ToolContext {
-            agent_id: AgentId::new(),
-            web_id: WebId::new(),
+            agent_id: uuid::Uuid::new_v4(),
+            web_id: uuid::Uuid::new_v4(),
             sandbox_path: PathBuf::from("/tmp"),
         };
 

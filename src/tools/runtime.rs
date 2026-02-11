@@ -41,26 +41,41 @@ impl ToolRuntime {
         );
 
         // Register file operation tools
-        if config.enable_remote_execution && config.impresario_client.is_some() {
-            let client = config.impresario_client.as_ref().unwrap().clone();
-            tools.insert(
-                ToolType::ReadFile,
-                Box::new(super::read_file::ReadFileTool::new_remote(
-                    client.clone(),
-                    config.sandbox_root.clone(),
-                )),
-            );
-            tools.insert(
-                ToolType::WriteFile,
-                Box::new(super::write_file::WriteFileTool::new_remote(
-                    client.clone(),
-                    config.sandbox_root.clone(),
-                )),
-            );
-            tools.insert(
-                ToolType::ExecuteCode,
-                Box::new(super::execute_code::ExecuteCodeTool::new(client)),
-            );
+        if config.enable_remote_execution {
+            if let Some(client) = config.impresario_client {
+                tools.insert(
+                    ToolType::ReadFile,
+                    Box::new(super::read_file::ReadFileTool::new_remote(
+                        client.clone(),
+                        config.sandbox_root.clone(),
+                    )),
+                );
+                tools.insert(
+                    ToolType::WriteFile,
+                    Box::new(super::write_file::WriteFileTool::new_remote(
+                        client.clone(),
+                        config.sandbox_root.clone(),
+                    )),
+                );
+                tools.insert(
+                    ToolType::ExecuteCode,
+                    Box::new(super::execute_code::ExecuteCodeTool::new(client)),
+                );
+            } else {
+                // Local file operations
+                tools.insert(
+                    ToolType::ReadFile,
+                    Box::new(super::read_file::ReadFileTool::new_local(
+                        config.sandbox_root.clone(),
+                    )),
+                );
+                tools.insert(
+                    ToolType::WriteFile,
+                    Box::new(super::write_file::WriteFileTool::new_local(
+                        config.sandbox_root.clone(),
+                    )),
+                );
+            }
         } else {
             // Local file operations
             tools.insert(
@@ -134,9 +149,11 @@ mod tests {
         let config = ToolConfig {
             sandbox_root: PathBuf::from("/tmp/test"),
             search_provider: None,
+            impresario_client: None,
+            enable_remote_execution: false,
         };
 
         let runtime = ToolRuntime::new(config).unwrap();
-        assert_eq!(runtime.tools.len(), 0); // No search provider
+        assert!(!runtime.tools.is_empty()); // Should have at least fetch_url tool
     }
 }

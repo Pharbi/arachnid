@@ -1,12 +1,28 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use serde_json::{json, Value};
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
 use tokio::fs;
 
 use super::impresario_client::ImpresarioClient;
 use super::{Tool, ToolContext, ToolResult};
 use crate::definitions::ToolType;
+
+fn normalize_path(path: &Path) -> PathBuf {
+    let mut components = Vec::new();
+    for component in path.components() {
+        match component {
+            Component::ParentDir => {
+                if !components.is_empty() {
+                    components.pop();
+                }
+            }
+            Component::CurDir => {}
+            _ => components.push(component),
+        }
+    }
+    components.iter().collect()
+}
 
 pub enum ReadFileMode {
     Local,
@@ -40,7 +56,11 @@ impl ReadFileTool {
             self.sandbox_root.join(path)
         };
 
-        if !full_path.starts_with(&self.sandbox_root) {
+        // Normalize the path by resolving .. and . components
+        let normalized = normalize_path(&full_path);
+
+        // Check if the normalized path is within the sandbox
+        if !normalized.starts_with(&self.sandbox_root) {
             return Err(anyhow!("Path escapes sandbox: {}", path));
         }
 
@@ -83,9 +103,7 @@ impl Tool for ReadFileTool {
         let validated_path = self.validate_path(path)?;
 
         let content = match &self.mode {
-            ReadFileMode::Local => {
-                fs::read_to_string(&validated_path).await?
-            }
+            ReadFileMode::Local => fs::read_to_string(&validated_path).await?,
             ReadFileMode::Remote(client) => {
                 client.read_file(validated_path.to_str().unwrap()).await?
             }
@@ -110,6 +128,7 @@ impl Tool for ReadFileTool {
 mod tests {
     use super::*;
     use tempfile::TempDir;
+    use tokio::fs;
 
     #[tokio::test]
     async fn test_read_file_local() {
@@ -124,8 +143,8 @@ mod tests {
         });
 
         let context = ToolContext {
-            agent_id: crate::types::AgentId::new(),
-            web_id: crate::types::WebId::new(),
+            agent_id: uuid::Uuid::new_v4(),
+            web_id: uuid::Uuid::new_v4(),
             sandbox_path: temp_dir.path().to_path_buf(),
         };
 

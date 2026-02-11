@@ -1,10 +1,10 @@
 use arachnid::tools::read_file::ReadFileTool;
 use arachnid::tools::write_file::WriteFileTool;
 use arachnid::tools::{Tool, ToolContext};
-use arachnid::types::{AgentId, WebId};
 use serde_json::json;
 use tempfile::TempDir;
 use tokio::fs;
+use uuid::Uuid;
 
 #[tokio::test]
 async fn test_write_and_read_file() {
@@ -15,8 +15,8 @@ async fn test_write_and_read_file() {
     let read_tool = ReadFileTool::new_local(sandbox_path.clone());
 
     let context = ToolContext {
-        agent_id: AgentId::new(),
-        web_id: WebId::new(),
+        agent_id: Uuid::new_v4(),
+        web_id: Uuid::new_v4(),
         sandbox_path: sandbox_path.clone(),
     };
 
@@ -49,8 +49,8 @@ async fn test_write_file_creates_directories() {
     let write_tool = WriteFileTool::new_local(sandbox_path.clone());
 
     let context = ToolContext {
-        agent_id: AgentId::new(),
-        web_id: WebId::new(),
+        agent_id: Uuid::new_v4(),
+        web_id: Uuid::new_v4(),
         sandbox_path: sandbox_path.clone(),
     };
 
@@ -74,8 +74,8 @@ async fn test_write_file_append_mode() {
     let write_tool = WriteFileTool::new_local(sandbox_path.clone());
 
     let context = ToolContext {
-        agent_id: AgentId::new(),
-        web_id: WebId::new(),
+        agent_id: Uuid::new_v4(),
+        web_id: Uuid::new_v4(),
         sandbox_path: sandbox_path.clone(),
     };
 
@@ -109,8 +109,8 @@ async fn test_read_file_path_validation() {
     let read_tool = ReadFileTool::new_local(sandbox_path.clone());
 
     let context = ToolContext {
-        agent_id: AgentId::new(),
-        web_id: WebId::new(),
+        agent_id: Uuid::new_v4(),
+        web_id: Uuid::new_v4(),
         sandbox_path: sandbox_path.clone(),
     };
 
@@ -132,8 +132,8 @@ async fn test_write_file_path_validation() {
     let write_tool = WriteFileTool::new_local(sandbox_path.clone());
 
     let context = ToolContext {
-        agent_id: AgentId::new(),
-        web_id: WebId::new(),
+        agent_id: Uuid::new_v4(),
+        web_id: Uuid::new_v4(),
         sandbox_path: sandbox_path.clone(),
     };
 
