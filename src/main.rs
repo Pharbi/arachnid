@@ -644,8 +644,8 @@ async fn run_web(id: Uuid, action: Option<WebAction>) -> Result<()> {
                 println!("  State: {:?}", agent.state);
                 println!("  Health: {:.2}", agent.health);
                 println!("  Children: {}", children.len());
-                if agent.parent_id.is_some() {
-                    println!("  Parent: {}", agent.parent_id.unwrap());
+                if let Some(parent_id) = agent.parent_id {
+                    println!("  Parent: {}", parent_id);
                 }
                 println!();
             }

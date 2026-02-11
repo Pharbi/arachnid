@@ -31,7 +31,9 @@ impl SearchCodebaseTool {
         args.push(self.sandbox_root.to_str().unwrap().to_string());
 
         let output =
-            tokio::task::spawn_blocking(move || Command::new("rg").args(&args).output()).await??;
+            tokio::task::spawn_blocking(move || Command::new("rg").args(&args).output())
+                .await?
+                .map_err(|e| anyhow!("ripgrep (rg) not found. Install it with: cargo install ripgrep. Error: {}", e))?;
 
         if !output.status.success() && output.status.code() != Some(1) {
             return Err(anyhow!(

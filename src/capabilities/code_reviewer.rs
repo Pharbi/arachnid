@@ -194,7 +194,7 @@ mod tests {
         };
 
         let signal = Signal::new(
-            uuid::Uuid::new_v4().into(),
+            uuid::Uuid::new_v4(),
             vec![0.8; 1536],
             "fn add(a: i32, b: i32) -> i32 { a + b }".to_string(),
             SignalDirection::Upward,
