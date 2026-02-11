@@ -1,5 +1,13 @@
+pub mod emit_signal;
+pub mod execute_code;
+pub mod fetch_url;
+pub mod impresario_client;
+pub mod read_file;
 pub mod runtime;
+pub mod search_codebase;
+pub mod spawn_agent;
 pub mod web_search;
+pub mod write_file;
 
 use anyhow::Result;
 use async_trait::async_trait;

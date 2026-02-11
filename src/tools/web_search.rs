@@ -86,7 +86,7 @@ mod tests {
         let tool = WebSearchTool::new(provider);
 
         let context = ToolContext {
-            agent_id: Uuid::new_v4().into(),
+            agent_id: Uuid::new_v4(),
             web_id: WebId::new_v4(),
             sandbox_path: PathBuf::from("/tmp"),
         };
