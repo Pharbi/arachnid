@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use serde_json::{json, Value};
-use std::path::PathBuf;
 use uuid::Uuid;
 
 use super::impresario_client::{ImpresarioClient, ExecResult};

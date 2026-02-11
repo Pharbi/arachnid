@@ -47,13 +47,15 @@ impl FetchUrlTool {
             body.clone()
         };
 
+        let size = extracted.len();
+
         Ok(FetchedContent {
             url: url.to_string(),
             status_code: status.as_u16(),
             content_type,
             raw_content: body,
             extracted_text: extracted,
-            size: extracted.len(),
+            size,
         })
     }
 }
