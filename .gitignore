@@ -19,8 +19,14 @@ target
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
-.contexts/*
 
+# macOS finder metadata
+.DS_Store
+
+# Local agent prompts and working notes.
+# Note: .context/ (singular) is ignored; .contexts/ (plural) holds the project
+# documentation the README links to and is intentionally tracked.
+.context/
 
 # Added by cargo
 

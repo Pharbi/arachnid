@@ -104,7 +104,7 @@ curl http://localhost:8080/webs/{id}/events
 curl http://localhost:8080/webs/{id}/results
 ```
 
-See [API Reference](.contexts/api-reference.md) for full documentation.
+Endpoint handlers are defined in `src/api/handlers.rs`.
 
 ## Development
 
@@ -177,10 +177,11 @@ export BRAVE_API_KEY=BSA...
 
 ## Documentation
 
-- [Architecture Guide](.contexts/architecture.md) - System design and concepts
-- [API Reference](.contexts/api-reference.md) - HTTP endpoints and SSE events
-- [Configuration Guide](.contexts/configuration.md) - All configuration options
-- [Capability Development](.contexts/capabilities.md) - Creating new capabilities
+Reference documentation has not been written yet. Until it is, the Architecture and
+Runtime Hardening sections of this file are the current design record, and the source is
+the reference: `src/engine/` for coordination and resonance, `src/definitions/` for the
+agent definition format, `src/tools/` for the tool runtime, and `src/api/` for HTTP
+endpoints and SSE events.
 
 ## Performance
 
@@ -196,8 +197,6 @@ Target benchmarks:
 - Input validation on all endpoints
 - No authentication by default (use reverse proxy for production)
 
-See [Security Guide](.contexts/security.md) for details.
-
 ## Contributing
 
 1. Fork the repository
@@ -208,12 +207,94 @@ See [Security Guide](.contexts/security.md) for details.
 
 ## Roadmap
 
+- [ ] Concurrent signal processing (see Runtime Hardening)
+- [ ] Artifact references in accumulated context (see Runtime Hardening)
+- [ ] Durable coordination state with resume (see Runtime Hardening)
+- [ ] Structured definition output contracts (see Runtime Hardening)
+- [ ] Tiered model routing
 - [ ] Web UI for monitoring
 - [ ] Additional embedding providers
 - [ ] Code execution sandbox
 - [ ] Streaming LLM responses
 - [ ] Agent definition templates
 - [ ] Performance optimizations
+
+## Runtime Hardening (Planned)
+
+Arachnid coordinates agents through emergent topology: no execution graph is authored
+in advance, and the active structure condenses at runtime from resonance between signal
+frequencies and agent tuning. That design choice is deliberate and is not up for
+revision. The items below are the orthogonal concerns - concurrency, state durability,
+context transport, and output typing - that any coordination runtime needs regardless of
+whether its topology is authored or emergent. Each one is a gap between what the runtime
+currently does and what the resonance model already assumes.
+
+### 1. Concurrent signal processing
+
+The coordination loop currently drains pending signals sequentially
+(`src/engine/coordination.rs`), awaiting each `process_signal` call before starting the
+next. Agents that resonate with independent signals therefore execute one at a time. The
+resonance model already establishes that these activations are independent - the loop
+just does not exploit it.
+
+Planned: process a signal batch concurrently with bounded fan-out, tolerating individual
+activation failures without aborting the batch. Blocked on `WebStore`, which is a
+synchronous trait over `Arc<RwLock<HashMap<..>>>`: it holds blocking locks inside async
+tasks, and its read-modify-write sequences (`get_agent` then `update_agent`) are not
+atomic, so concurrent activations touching the same agent or parent context would drop
+writes.
+
+### 2. Artifact references in accumulated context
+
+`accumulate_context_from_signal` clones full signal content into the parent's
+`accumulated_knowledge`. Content is copied again at each hop, so context grows with tree
+depth and upward traffic, and a deep web can exhaust the root agent's window with retold
+material.
+
+Planned: persist signal payloads once and propagate an artifact reference plus a short
+structured summary. The `Artifact` enum in `src/tools/mod.rs` already models the
+reference type; it needs a storage path and a resolution step so a receiving agent can
+read the original rather than a compression of it.
+
+### 3. Durable coordination state with resume
+
+Web execution state lives in the in-memory `WebStore` that `CoordinationEngine` is
+generic over, while definitions and agent records use the separate Postgres-backed
+`Storage` trait. Live coordination state is not on the durable path, so an interrupted
+web cannot be resumed and long-running work is lost on restart.
+
+Planned: converge the two storage abstractions, checkpoint iteration state and signal
+queues after expensive operations, and add a resume path that reconstructs a web from its
+last checkpoint. Tool side effects need idempotency keys so replay after a checkpoint does
+not duplicate writes.
+
+### 4. Structured definition output contracts
+
+`AgentDefinition` specifies a bounded job, a tuning vector, a system prompt, and a tool
+allowlist, but says nothing about output shape. `AgentExecutor::execute` returns an
+untyped value and recovers signals by parsing free text, so a malformed response
+propagates downstream before anything can reject it.
+
+Planned: add an optional output schema and declared failure states to the definition
+format, validate executor output against the schema, and route validation failures to the
+existing repair and health-degradation paths rather than onward through the web.
+
+### 5. Tiered model routing
+
+Every agent resolves to a single configured LLM provider. Bounded work such as
+classification, extraction, and formatting costs the same as decomposition and synthesis.
+
+Planned: let definitions declare a model tier, and select the provider per activation.
+
+### Considered and declined
+
+Authoring the execution graph explicitly - predeclared nodes, static edges, and a routing
+table - would make the system inspectable in ways emergent topology is not. It is declined
+because it replaces the project's central mechanism. Resonance is the router; making
+routes static removes the reason arachnid exists rather than improving it. The
+inspectability concern is real and is addressed instead by recording resonance scores and
+activation decisions in durable state (item 3), so any route the system took can be
+explained after the fact.
 
 ## v2.0 Architecture (Early Development)
 
