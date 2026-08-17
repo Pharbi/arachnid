@@ -73,40 +73,29 @@ impl AnalystCapability {
                 continue;
             }
 
-            match current_section {
-                "summary" => {
+            let bullet = line
+                .starts_with(['-', '*'])
+                .then(|| line.trim_start_matches(['-', '*']).trim());
+
+            match (current_section, bullet) {
+                ("summary", _) => {
                     if !summary.is_empty() {
                         summary.push(' ');
                     }
                     summary.push_str(line);
                 }
-                "findings" => {
-                    if line.starts_with('-') || line.starts_with('*') {
-                        let content = line.trim_start_matches('-').trim_start_matches('*').trim();
-                        key_findings.push(Finding {
-                            title: content.to_string(),
-                            description: content.to_string(),
-                            evidence: vec![],
-                            significance: "medium".to_string(),
-                        });
-                    }
-                }
-                "patterns" => {
-                    if line.starts_with('-') || line.starts_with('*') {
-                        let content = line.trim_start_matches('-').trim_start_matches('*').trim();
-                        patterns.push(Pattern {
-                            name: content.to_string(),
-                            description: content.to_string(),
-                            occurrences: 1,
-                        });
-                    }
-                }
-                "recommendations" => {
-                    if line.starts_with('-') || line.starts_with('*') {
-                        let content = line.trim_start_matches('-').trim_start_matches('*').trim();
-                        recommendations.push(content.to_string());
-                    }
-                }
+                ("findings", Some(content)) => key_findings.push(Finding {
+                    title: content.to_string(),
+                    description: content.to_string(),
+                    evidence: vec![],
+                    significance: "medium".to_string(),
+                }),
+                ("patterns", Some(content)) => patterns.push(Pattern {
+                    name: content.to_string(),
+                    description: content.to_string(),
+                    occurrences: 1,
+                }),
+                ("recommendations", Some(content)) => recommendations.push(content.to_string()),
                 _ => {}
             }
         }

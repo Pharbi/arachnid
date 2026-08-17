@@ -382,7 +382,7 @@ impl Storage for InMemoryStore {
             .filter(|d| source.is_none() || source == Some(d.source))
             .cloned()
             .collect();
-        result.sort_by(|a, b| b.use_count.cmp(&a.use_count));
+        result.sort_by_key(|d| std::cmp::Reverse(d.use_count));
         Ok(result)
     }
 
