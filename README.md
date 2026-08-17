@@ -164,7 +164,10 @@ export BRAVE_API_KEY=BSA...
 
 ## Test Coverage
 
-77 unit tests covering:
+146 tests across three targets: 112 unit tests, 12 definition-architecture integration
+tests (`tests/phase9_integration.rs`), and 22 tool integration tests (`tests/tools/`).
+
+Coverage includes:
 - Core coordination and resonance
 - Signal propagation with attenuation
 - Lifecycle management and state transitions
@@ -174,6 +177,8 @@ export BRAVE_API_KEY=BSA...
 - All capabilities
 - Validation service
 - HTTP API endpoints
+- Tool runtime: schema exposure, permission filtering, file operations, fetch, and
+  coordination tools
 
 ## Documentation
 
@@ -193,7 +198,11 @@ Target benchmarks:
 ## Security
 
 - API keys stored in environment variables
-- Sandboxed file operations (planned)
+- Each agent works in its own sandbox directory (`<sandbox_root>/<web_id>/<agent_id>`), so
+  agents cannot read or overwrite each other's files. File tools reject paths that escape
+  it, and reject a context whose sandbox falls outside the configured root
+- Code execution runs on a remote host over SSH rather than in-process
+- Tool access is restricted per agent by the definition's tool allowlist
 - Input validation on all endpoints
 - No authentication by default (use reverse proxy for production)
 
@@ -214,7 +223,9 @@ Target benchmarks:
 - [ ] Tiered model routing
 - [ ] Web UI for monitoring
 - [ ] Additional embedding providers
-- [ ] Code execution sandbox
+- [ ] Local sandboxed code execution (currently dispatches to a remote host over SSH)
+- [ ] `query_database` tool
+- [ ] Wire the definition/tool path into the coordination engine (Phase 11)
 - [ ] Streaming LLM responses
 - [ ] Agent definition templates
 - [ ] Performance optimizations
@@ -296,14 +307,31 @@ inspectability concern is real and is addressed instead by recording resonance s
 activation decisions in durable state (item 3), so any route the system took can be
 explained after the fact.
 
-## v2.0 Architecture (Early Development)
+## v2.0 Architecture (In Development)
 
-Version 2.0 will introduce a flexible definition/instance/tool model, moving from hardcoded capabilities to dynamic agent definitions.
+Version 2.0 introduces a flexible definition/instance/tool model, moving from hardcoded
+capabilities to dynamic agent definitions.
 
-**Development Status:** ~30% complete (Phases 9-11)
-- Phase 9 (Definition Architecture): ~40% - Schema and builtin definition done, factory/storage/executor missing
-- Phase 10 (Tool Runtime): ~30% - Tool trait done, 1 of 9 tools implemented
-- Phase 11 (Integration): ~15% - Documentation started, CLI/API/integration pending
+**Development Status:** Phases 9-10 substantially complete, Phase 11 pending
+- Phase 9 (Definition Architecture): schema, builtin definition, generator, factory, and
+  definition storage implemented
+- Phase 10 (Tool Runtime): 8 of 9 tools implemented - web_search, fetch_url, read_file,
+  write_file, execute_code, emit_signal, spawn_agent, search_codebase. `query_database`
+  is declared in `ToolType` but not yet implemented. Runtime filters tool schemas by the
+  definition's allowlist, so definitions control tool access
+- Phase 11 (Integration): pending - CLI and API still drive the v1 capability path, and
+  user custom definitions are not yet loaded
+
+The v1 `Capability` implementations in `src/capabilities/` remain the live execution path.
+The definition/tool architecture runs alongside it and is not yet wired into the
+coordination engine.
+
+### Code Execution
+
+`execute_code` does not sandbox locally. It dispatches to a remote execution host over SSH
+via `ImpresarioClient` (`src/tools/impresario_client.rs`), configured with
+`IMPRESARIO_HOST`, `IMPRESARIO_PORT`, `IMPRESARIO_USER`, and `IMPRESARIO_KEY`. Isolation
+is a property of that remote host, not of the local process.
 
 ### Key Changes
 

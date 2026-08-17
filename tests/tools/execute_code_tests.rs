@@ -1,7 +1,7 @@
 use arachnid::definitions::ToolType;
 use arachnid::tools::execute_code::ExecuteCodeTool;
 use arachnid::tools::impresario_client::{ImpresarioClient, ImpresarioConfig};
-use arachnid::tools::{SideEffect, Tool};
+use arachnid::tools::Tool;
 
 #[test]
 fn test_execute_code_tool_metadata() {
@@ -38,10 +38,7 @@ fn test_execute_code_schema_validates_languages() {
     assert_eq!(schema["properties"]["language"]["type"], "string");
 
     let languages = schema["properties"]["language"]["enum"].as_array().unwrap();
-    let lang_strings: Vec<&str> = languages
-        .iter()
-        .map(|v| v.as_str().unwrap())
-        .collect();
+    let lang_strings: Vec<&str> = languages.iter().map(|v| v.as_str().unwrap()).collect();
 
     assert!(lang_strings.contains(&"python"));
     assert!(lang_strings.contains(&"javascript"));
@@ -65,12 +62,6 @@ fn test_execute_code_has_rollback_option() {
     let schema = tool.parameters_schema();
 
     assert!(schema["properties"].get("rollback_on_error").is_some());
-    assert_eq!(
-        schema["properties"]["rollback_on_error"]["type"],
-        "boolean"
-    );
-    assert_eq!(
-        schema["properties"]["rollback_on_error"]["default"],
-        true
-    );
+    assert_eq!(schema["properties"]["rollback_on_error"]["type"], "boolean");
+    assert_eq!(schema["properties"]["rollback_on_error"]["default"], true);
 }

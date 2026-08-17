@@ -1,10 +1,10 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use serde_json::{json, Value};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::{Tool, ToolContext, ToolResult};
+use super::{resolve_sandbox, Tool, ToolContext, ToolResult};
 use crate::definitions::ToolType;
 
 pub struct SearchCodebaseTool {
@@ -20,6 +20,7 @@ impl SearchCodebaseTool {
         &self,
         pattern: &str,
         file_pattern: Option<&str>,
+        sandbox: &Path,
     ) -> Result<Vec<SearchMatch>> {
         let mut args = vec!["--json".to_string(), "-n".to_string(), pattern.to_string()];
 
@@ -28,7 +29,7 @@ impl SearchCodebaseTool {
             args.push(fp.to_string());
         }
 
-        args.push(self.sandbox_root.to_str().unwrap().to_string());
+        args.push(sandbox.to_string_lossy().into_owned());
 
         let output = tokio::task::spawn_blocking(move || Command::new("rg").args(&args).output())
             .await?
@@ -67,6 +68,7 @@ impl SearchCodebaseTool {
         &self,
         query: &str,
         file_pattern: Option<&str>,
+        sandbox: &Path,
     ) -> Result<Vec<SearchMatch>> {
         let pattern = query
             .split_whitespace()
@@ -74,7 +76,7 @@ impl SearchCodebaseTool {
             .collect::<Vec<_>>()
             .join("|");
 
-        self.search_regex(&pattern, file_pattern).await
+        self.search_regex(&pattern, file_pattern, sandbox).await
     }
 }
 
@@ -120,7 +122,7 @@ impl Tool for SearchCodebaseTool {
         })
     }
 
-    async fn execute(&self, params: Value, _context: &ToolContext) -> Result<ToolResult> {
+    async fn execute(&self, params: Value, context: &ToolContext) -> Result<ToolResult> {
         let query = params["query"]
             .as_str()
             .ok_or_else(|| anyhow!("Missing query parameter"))?;
@@ -128,9 +130,11 @@ impl Tool for SearchCodebaseTool {
         let file_pattern = params["file_pattern"].as_str();
         let max_results = params["max_results"].as_u64().unwrap_or(50) as usize;
 
+        let sandbox = resolve_sandbox(&self.sandbox_root, context)?;
+
         let mut matches = match mode {
-            "regex" => self.search_regex(query, file_pattern).await?,
-            "content" => self.search_content(query, file_pattern).await?,
+            "regex" => self.search_regex(query, file_pattern, &sandbox).await?,
+            "content" => self.search_content(query, file_pattern, &sandbox).await?,
             _ => return Err(anyhow!("Invalid mode: {}", mode)),
         };
 

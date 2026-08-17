@@ -1,29 +1,13 @@
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use serde_json::{json, Value};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use tokio::fs::{self, OpenOptions};
 use tokio::io::AsyncWriteExt;
 
 use super::impresario_client::ImpresarioClient;
-use super::{Artifact, SideEffect, Tool, ToolContext, ToolResult};
+use super::{normalize_path, resolve_sandbox, Artifact, SideEffect, Tool, ToolContext, ToolResult};
 use crate::definitions::ToolType;
-
-fn normalize_path(path: &Path) -> PathBuf {
-    let mut components = Vec::new();
-    for component in path.components() {
-        match component {
-            Component::ParentDir => {
-                if !components.is_empty() {
-                    components.pop();
-                }
-            }
-            Component::CurDir => {}
-            _ => components.push(component),
-        }
-    }
-    components.iter().collect()
-}
 
 pub enum WriteFileMode {
     Local,
@@ -50,22 +34,13 @@ impl WriteFileTool {
         }
     }
 
-    fn validate_path(&self, path: &str) -> Result<PathBuf> {
-        let full_path = if path.starts_with('/') {
-            PathBuf::from(path)
-        } else {
-            self.sandbox_root.join(path)
-        };
+    fn validate_path(&self, path: &str, sandbox: &Path) -> Result<PathBuf> {
+        let normalized = normalize_path(&sandbox.join(path));
 
-        // Normalize the path by resolving .. and . components
-        let normalized = normalize_path(&full_path);
-
-        // Check if the normalized path is within the sandbox
-        if !normalized.starts_with(&self.sandbox_root) {
-            return Err(anyhow!("Path escapes sandbox: {}", path));
-        }
-
-        Ok(full_path)
+        normalized
+            .starts_with(sandbox)
+            .then_some(normalized)
+            .ok_or_else(|| anyhow!("Path escapes sandbox: {}", path))
     }
 }
 
@@ -105,7 +80,7 @@ impl Tool for WriteFileTool {
         })
     }
 
-    async fn execute(&self, params: Value, _context: &ToolContext) -> Result<ToolResult> {
+    async fn execute(&self, params: Value, context: &ToolContext) -> Result<ToolResult> {
         let path = params["path"]
             .as_str()
             .ok_or_else(|| anyhow!("Missing path parameter"))?;
@@ -114,7 +89,8 @@ impl Tool for WriteFileTool {
             .ok_or_else(|| anyhow!("Missing content parameter"))?;
         let append = params["append"].as_bool().unwrap_or(false);
 
-        let validated_path = self.validate_path(path)?;
+        let sandbox = resolve_sandbox(&self.sandbox_root, context)?;
+        let validated_path = self.validate_path(path, &sandbox)?;
 
         match &self.mode {
             WriteFileMode::Local => {
@@ -247,9 +223,70 @@ mod tests {
     #[test]
     fn test_path_validation() {
         let temp_dir = TempDir::new().unwrap();
+        let sandbox = temp_dir.path().to_path_buf();
+        let tool = WriteFileTool::new_local(sandbox.clone());
+
+        assert!(tool.validate_path("safe.txt", &sandbox).is_ok());
+        assert!(tool.validate_path("../escape.txt", &sandbox).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_agents_get_isolated_sandboxes() {
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path().to_path_buf();
+        let tool = WriteFileTool::new_local(root.clone());
+
+        let agent_a = uuid::Uuid::new_v4();
+        let agent_b = uuid::Uuid::new_v4();
+        let web_id = uuid::Uuid::new_v4();
+
+        // Both agents write to the same relative path.
+        for agent_id in [agent_a, agent_b] {
+            let context = ToolContext {
+                agent_id,
+                web_id,
+                sandbox_path: root.join(web_id.to_string()).join(agent_id.to_string()),
+            };
+            tool.execute(
+                json!({ "path": "notes.txt", "content": agent_id.to_string() }),
+                &context,
+            )
+            .await
+            .unwrap();
+        }
+
+        // Neither overwrote the other.
+        let base = root.join(web_id.to_string());
+        let a = fs::read_to_string(base.join(agent_a.to_string()).join("notes.txt"))
+            .await
+            .unwrap();
+        let b = fs::read_to_string(base.join(agent_b.to_string()).join("notes.txt"))
+            .await
+            .unwrap();
+
+        assert_eq!(a, agent_a.to_string());
+        assert_eq!(b, agent_b.to_string());
+        assert_ne!(a, b);
+    }
+
+    #[tokio::test]
+    async fn test_context_sandbox_outside_root_is_rejected() {
+        let temp_dir = TempDir::new().unwrap();
+        let other_dir = TempDir::new().unwrap();
         let tool = WriteFileTool::new_local(temp_dir.path().to_path_buf());
 
-        assert!(tool.validate_path("safe.txt").is_ok());
-        assert!(tool.validate_path("../escape.txt").is_err());
+        // A context pointing outside the configured root must not widen the boundary.
+        let context = ToolContext {
+            agent_id: uuid::Uuid::new_v4(),
+            web_id: uuid::Uuid::new_v4(),
+            sandbox_path: other_dir.path().to_path_buf(),
+        };
+
+        let result = tool
+            .execute(json!({ "path": "escaped.txt", "content": "x" }), &context)
+            .await;
+
+        assert!(result.is_err());
+        assert!(!other_dir.path().join("escaped.txt").exists());
     }
 }

@@ -137,6 +137,24 @@ impl AgentExecutor {
         ]
     }
 
+    /// Each agent works in its own directory under the sandbox root so that
+    /// concurrent agents cannot overwrite or read each other's files.
+    async fn agent_tool_context(&self, agent: &Agent) -> Result<ToolContext> {
+        let sandbox_path = self
+            .config
+            .sandbox_root
+            .join(agent.web_id.to_string())
+            .join(agent.id.to_string());
+
+        tokio::fs::create_dir_all(&sandbox_path).await?;
+
+        Ok(ToolContext {
+            agent_id: agent.id,
+            web_id: agent.web_id,
+            sandbox_path,
+        })
+    }
+
     async fn run_conversation(
         &self,
         mut messages: Vec<Message>,
@@ -146,6 +164,8 @@ impl AgentExecutor {
     ) -> Result<(Value, Vec<ToolResult>)> {
         let mut all_tool_results = Vec::new();
         let mut iterations = 0;
+
+        let tool_context = self.agent_tool_context(agent).await?;
 
         loop {
             iterations += 1;
@@ -159,12 +179,6 @@ impl AgentExecutor {
             if tool_calls.is_empty() {
                 return Ok((json!({ "response": response }), all_tool_results));
             }
-
-            let tool_context = ToolContext {
-                agent_id: agent.id,
-                web_id: agent.web_id,
-                sandbox_path: self.config.sandbox_root.clone(),
-            };
 
             let mut tool_outputs = Vec::new();
             for tool_call in tool_calls {

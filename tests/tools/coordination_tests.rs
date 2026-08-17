@@ -140,7 +140,10 @@ async fn test_spawn_agent_basic() {
         result.output["need"],
         "Analyze security vulnerabilities in authentication code"
     );
-    assert_eq!(result.output["parent_agent_id"], context.agent_id.to_string());
+    assert_eq!(
+        result.output["parent_agent_id"],
+        context.agent_id.to_string()
+    );
     assert_eq!(result.output["web_id"], context.web_id.to_string());
 }
 
